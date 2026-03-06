@@ -4,46 +4,41 @@ async function loadResume() {
   return response.json();
 }
 
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function normalizeResumeData(data) {
   const basics = data.basics || {};
   const fallbackLocation = typeof data.location === 'string' ? data.location : '';
-  const locationParts = [
-    basics.location?.city,
-    basics.location?.region,
-    basics.location?.country
-  ].filter(Boolean);
+  const locationParts = [basics.location?.city, basics.location?.region, basics.location?.country].filter(Boolean);
 
   const normalizeSkillGroups = inputSkills => {
     if (!Array.isArray(inputSkills) || inputSkills.length === 0) return [];
 
     const allStrings = inputSkills.every(item => typeof item === 'string');
     if (allStrings) {
-      return [
-        {
-          name: 'Core Skills',
-          keywords: [...new Set(inputSkills.filter(Boolean))]
-        }
-      ];
+      return [{ name: 'Core Skills', keywords: [...new Set(inputSkills.filter(Boolean))] }];
     }
 
     return inputSkills
       .map(item => {
         if (!item || typeof item !== 'object') return null;
-        const keywords = Array.isArray(item.keywords)
-          ? [...new Set(item.keywords.filter(Boolean))]
-          : [];
+        const keywords = Array.isArray(item.keywords) ? [...new Set(item.keywords.filter(Boolean))] : [];
         if (keywords.length === 0) return null;
-        return {
-          name: item.name || 'Core Skills',
-          keywords
-        };
+        return { name: item.name || 'Core Skills', keywords };
       })
       .filter(Boolean);
   };
 
   return {
     name: basics.name || data.name || 'Your Name',
-    headline: basics.headline || data.title || '',
+    headline: basics.headline || data.title || 'Operations and Systems Professional',
     email: basics.email || data.email || '',
     phone: basics.phone || data.phone || '',
     linkedin:
@@ -91,17 +86,16 @@ function normalizeResumeData(data) {
   };
 }
 
-function sectionTitle(text) {
-  return `<h2 class="section-title">${text}</h2>`;
-}
-
 function formatDate(value) {
   if (!value) return 'Present';
-  const [year, month] = value.split('-');
+  if (/^[A-Za-z]{3}\s\d{4}$/.test(value) || /^[A-Za-z]+\s\d{4}$/.test(value)) return value;
+
+  const [year, month] = String(value).split('-');
   if (!year) return value;
   if (!month) return year;
 
   const date = new Date(Number(year), Number(month) - 1, 1);
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 }
 
@@ -110,7 +104,7 @@ function formatDateRange(start, end) {
 }
 
 function getInitials(name) {
-  return name
+  return String(name || '')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -118,20 +112,39 @@ function getInitials(name) {
     .join('');
 }
 
-function renderSkills(groups) {
-  const singleDefaultGroup =
-    groups.length === 1 && groups[0].name.toLowerCase() === 'core skills';
+function iconClassForSkill(skill = '', group = '') {
+  const token = `${skill} ${group}`.toLowerCase();
 
+  if (/sap|data|system|computer|it|office|windows|hardware|network/.test(token)) return 'fa-solid fa-laptop-code';
+  if (/safety|security/.test(token)) return 'fa-solid fa-shield-halved';
+  if (/forklift|crane|saw|equipment|industrial/.test(token)) return 'fa-solid fa-gears';
+  if (/warehouse|shipping|receiving|inventory|logistics|material/.test(token)) return 'fa-solid fa-warehouse';
+  if (/lead|leadership|coordination|team/.test(token)) return 'fa-solid fa-people-group';
+  if (/problem|troubleshooting/.test(token)) return 'fa-solid fa-screwdriver-wrench';
+
+  return 'fa-solid fa-star';
+}
+
+function renderSkillGroups(groups) {
   return groups
     .map(
       group => `
-    <article class="skill-group">
-      ${singleDefaultGroup ? '' : `<h3 class="skill-group-title">${group.name}</h3>`}
-      <div class="skill-grid">
-        ${group.keywords.map(skill => `<span class="skill-chip">${skill}</span>`).join('')}
-      </div>
-    </article>
-  `
+      <article class="skill-group">
+        <h3>${escapeHtml(group.name)}</h3>
+        <div class="skill-list">
+          ${group.keywords
+            .map(
+              skill => `
+                <span class="skill-chip">
+                  <i class="${iconClassForSkill(skill, group.name)}" aria-hidden="true"></i>
+                  ${escapeHtml(skill)}
+                </span>
+              `
+            )
+            .join('')}
+        </div>
+      </article>
+      `
     )
     .join('');
 }
@@ -140,19 +153,21 @@ function renderExperience(items) {
   return items
     .map(
       item => `
-    <article class="entry">
-      <div class="entry-header">
-        <div>
-          <div class="entry-role">${item.position}</div>
-          <div class="entry-company">${item.company} - ${item.location}</div>
+      <article class="timeline-item">
+        <div class="role-row">
+          <div>
+            <h3 class="role-title">${escapeHtml(item.position)}</h3>
+            <div class="role-meta">${escapeHtml(item.company)}${item.location ? ` | ${escapeHtml(item.location)}` : ''}</div>
+          </div>
+          <div class="role-dates">${escapeHtml(item.dateLabel || formatDateRange(item.startDate, item.endDate))}</div>
         </div>
-        <div class="entry-dates">${item.dateLabel || formatDateRange(item.startDate, item.endDate)}</div>
-      </div>
-      <ul>
-        ${(item.highlights || []).map(bullet => `<li>${bullet}</li>`).join('')}
-      </ul>
-    </article>
-  `
+        ${
+          item.highlights?.length
+            ? `<ul>${item.highlights.map(bullet => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>`
+            : ''
+        }
+      </article>
+      `
     )
     .join('');
 }
@@ -161,16 +176,12 @@ function renderEducation(items) {
   return items
     .map(
       item => `
-    <article class="entry">
-      <div class="entry-header">
-        <div>
-          <div class="entry-role">${item.area}</div>
-          <div class="entry-company">${item.institution} - ${item.location}</div>
-        </div>
-        <div class="entry-dates">${formatDate(item.endDate)}</div>
-      </div>
-    </article>
-  `
+      <article class="simple-entry">
+        <h3 class="simple-title">${escapeHtml(item.area)}</h3>
+        <div class="simple-meta">${escapeHtml(item.institution)}${item.location ? ` | ${escapeHtml(item.location)}` : ''}</div>
+        <div class="role-dates">${escapeHtml(formatDate(item.endDate))}</div>
+      </article>
+      `
     )
     .join('');
 }
@@ -179,18 +190,16 @@ function renderVolunteer(items) {
   return items
     .map(
       item => `
-    <article class="entry">
-      <div class="entry-header">
-        <div>
-          <div class="entry-role">${item.position}</div>
-          <div class="entry-company">${item.organization} - ${item.location}</div>
-        </div>
-      </div>
-      <ul>
-        ${(item.highlights || []).map(bullet => `<li>${bullet}</li>`).join('')}
-      </ul>
-    </article>
-  `
+      <article class="simple-entry">
+        <h3 class="simple-title">${escapeHtml(item.position)}</h3>
+        <div class="simple-meta">${escapeHtml(item.organization)}${item.location ? ` | ${escapeHtml(item.location)}` : ''}</div>
+        ${
+          item.highlights?.length
+            ? `<ul>${item.highlights.map(bullet => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>`
+            : ''
+        }
+      </article>
+      `
     )
     .join('');
 }
@@ -204,53 +213,47 @@ function renderResume(data) {
     <section class="hero">
       <div class="hero-grid">
         <div>
-          <p class="eyebrow">Resume</p>
-          <h1>${resume.name}</h1>
-          <div class="title">${resume.headline}</div>
+          <p class="eyebrow">Professional Portfolio</p>
+          <h1>${escapeHtml(resume.name)}</h1>
+          <p class="hero-role">${escapeHtml(resume.headline)}</p>
+          <p class="hero-summary">${escapeHtml(resume.summary)}</p>
         </div>
-        <div class="hero-aside">
+        <aside class="hero-card">
           <div class="profile-photo" aria-label="Profile photo">
             ${
               resume.image
-                ? `<img src="${resume.image}" alt="${resume.name}" loading="eager" />`
-                : `<span>${initials}</span>`
+                ? `<img src="${escapeHtml(resume.image)}" alt="${escapeHtml(resume.name)}" loading="eager" />`
+                : `<span>${escapeHtml(initials)}</span>`
             }
           </div>
-          <div class="contact-row">
-            ${resume.email ? `<a href="mailto:${resume.email}">${resume.email}</a>` : ''}
-            ${resume.phone ? `<a href="tel:${resume.phone.replace(/[^\d+]/g, '')}">${resume.phone}</a>` : ''}
-            ${resume.linkedin ? `<a href="${resume.linkedin}" target="_blank" rel="noopener noreferrer">LinkedIn</a>` : ''}
-            ${resume.location ? `<span>${resume.location}</span>` : ''}
-          </div>
-        </div>
+          <ul class="hero-links">
+            ${resume.email ? `<li><a href="mailto:${escapeHtml(resume.email)}"><i class="fa-solid fa-envelope"></i>${escapeHtml(resume.email)}</a></li>` : ''}
+            ${resume.phone ? `<li><a href="tel:${escapeHtml(resume.phone.replace(/[^\d+]/g, ''))}"><i class="fa-solid fa-phone"></i>${escapeHtml(resume.phone)}</a></li>` : ''}
+            ${resume.linkedin ? `<li><a href="${escapeHtml(resume.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>LinkedIn Profile</a></li>` : ''}
+            ${resume.location ? `<li><span><i class="fa-solid fa-location-dot"></i>${escapeHtml(resume.location)}</span></li>` : ''}
+          </ul>
+        </aside>
       </div>
     </section>
 
-    <section class="content">
+    <section class="section-wrap">
       <section class="section">
-        ${sectionTitle('Professional Summary')}
-        <p class="summary">${resume.summary}</p>
+        <h2>Core Skills</h2>
+        <div class="skills-grid">${renderSkillGroups(resume.skillGroups)}</div>
       </section>
 
       <section class="section">
-        ${sectionTitle('Core Skills')}
-        <div class="skills-layout">
-          ${renderSkills(resume.skillGroups)}
-        </div>
-      </section>
-
-      <section class="section">
-        ${sectionTitle('Professional Experience')}
-        ${renderExperience(resume.work)}
+        <h2>Experience Timeline</h2>
+        <div class="timeline">${renderExperience(resume.work)}</div>
       </section>
 
       <section class="section two-col">
         <div>
-          ${sectionTitle('Education')}
+          <h2>Education</h2>
           ${renderEducation(resume.education)}
         </div>
         <div>
-          ${sectionTitle('Volunteer Experience')}
+          <h2>Volunteer Work</h2>
           ${renderVolunteer(resume.volunteer)}
         </div>
       </section>
@@ -258,15 +261,60 @@ function renderResume(data) {
   `;
 }
 
+function setTheme(theme) {
+  const html = document.documentElement;
+  const body = document.body;
+  const button = document.getElementById('themeBtn');
+  const mode = theme === 'dark' ? 'dark' : 'light';
+
+  html.setAttribute('data-theme', mode);
+  body.classList.toggle('theme-dark', mode === 'dark');
+
+  try {
+    localStorage.setItem('portfolio-theme', mode);
+  } catch (error) {
+    // Ignore storage failures (private mode / restricted contexts).
+  }
+
+  const isDark = mode === 'dark';
+  if (button) {
+    button.innerHTML = isDark
+      ? '<i class="fa-solid fa-sun"></i><span>Light</span>'
+      : '<i class="fa-solid fa-moon"></i><span>Dark</span>';
+  }
+}
+
+function initTheme() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem('portfolio-theme');
+  } catch (error) {
+    saved = null;
+  }
+
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+  const themeBtn = document.getElementById('themeBtn');
+  if (!themeBtn) return;
+
+  themeBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  });
+}
+
 document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+initTheme();
 
 loadResume()
   .then(renderResume)
   .catch(error => {
     document.getElementById('resumeRoot').innerHTML = `
-      <section class="content">
-        <h1>Unable to load resume</h1>
-        <p>${error.message}</p>
+      <section class="section-wrap">
+        <h2>Unable to load resume</h2>
+        <p>${escapeHtml(error.message)}</p>
       </section>
     `;
   });

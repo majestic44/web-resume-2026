@@ -1,26 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
-    <meta name="robots" content="noindex, nofollow">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jareth Thomas Resume</title>
+    <title>Jareth Thomas | Professional Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="page-shell no-print">
-      <div class="toolbar">
+    <header class="topbar no-print">
+      <div class="topbar-inner">
         <div>
-          <strong>Web Resume Starter</strong>
-          <span class="toolbar-sub">Modern single-page resume with PDF export</span>
+          <strong class="brand">Jareth Thomas</strong>
+          <p class="brand-sub">Professional Portfolio Resume</p>
         </div>
-        <div class="toolbar-actions">
-          <button id="printBtn">Export PDF</button>
+        <div class="topbar-actions">
+          <button id="themeBtn" class="btn btn-quiet" type="button" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+            <span>Dark</span>
+          </button>
+          <button id="printBtn" class="btn" type="button">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Export PDF</span>
+          </button>
         </div>
       </div>
-    </div>
+    </header>
 
-    <main class="resume" id="resumeRoot" aria-live="polite"></main>
+    <main class="portfolio" id="resumeRoot" aria-live="polite"></main>
 
     <script src="script.js"></script>
   </body>
