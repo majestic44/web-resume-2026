@@ -1,0 +1,192 @@
+{
+  "name": "Jareth Thomas",
+  "title": "Operations, Manufacturing & Skilled Trades Professional",
+  "location": "Charleston, TN",
+  "phone": "(423) 508-4113",
+  "email": "Jareth59@gmail.com",
+  "linkedin": "https://www.linkedin.com/in/jaretht/",
+  "image": "images/profile.png",
+  "images": {
+    "profile": "images/profile.png"
+  },
+  "summary": "Reliable and hardworking operations professional with experience in manufacturing, warehouse logistics, electrical work, security, and residential repair services. Skilled in material handling, equipment operation, inventory systems, troubleshooting, and maintaining safe, efficient work environments. Proven ability to lead projects and manage operations as co-owner of MC Handyman LLC.",
+  "skills": [
+      {
+        "name": "Warehouse & Logistics",
+        "keywords": [
+          "Shipping and Receiving",
+          "Material Handling",
+          "Inventory Tracking",
+          "Order Pulling",
+          "Warehouse Operations",
+          "Production Support"
+        ]
+      },
+      {
+        "name": "Equipment Operation",
+        "keywords": [
+          "Forklift Operation",
+          "Overhead Crane Operation",
+          "Industrial Saw Operation",
+          "Material Handling Equipment",
+          "Warehouse Safety"
+        ]
+      },
+      {
+        "name": "Computer & Technical",
+        "keywords": [
+          "Microsoft Office",
+          "Windows PC Troubleshooting",
+          "Inventory Data Entry Systems",
+          "SAP Order Processing",
+          "Hardware Setup",
+          "Office System Administration"
+        ]
+      },
+      {
+        "name": "Workplace Strengths",
+        "keywords": [
+          "Strong work ethic and reliability",
+          "Ability to work in fast-paced environments",
+          "Team collaboration",
+          "Problem solving and troubleshooting",
+          "Leadership and task coordination"
+        ]
+      }
+    ],
+  "experience": [
+    {
+      "role": "Co-Owner",
+      "company": "MC Handyman LLC",
+      "location": "Cleveland, TN",
+      "dates": "Aug 2025 - Present",
+      "bullets": [
+        "Co-own and operate a residential repair and property maintenance business serving local clients.",
+        "Manage scheduling, customer communication, estimates, invoicing, and project coordination.",
+        "Perform residential repair work including flooring, drywall, trim work, painting, and minor electrical repairs.",
+        "Diagnose and troubleshoot residential electrical and mechanical issues.",
+        "Coordinate materials and workflow to complete projects efficiently and to customer expectations."
+      ]
+    },
+    {
+      "role": "Coil Receiving",
+      "company": "Gestamp",
+      "location": "Chattanooga, TN",
+      "dates": "Feb 2024 - Aug 2025",
+      "bullets": [
+        "Received and inspected incoming steel shipments and production coils.",
+        "Verified material information and entered receiving data into inventory systems.",
+        "Assisted with purchase order entry and material documentation.",
+        "Helped maintain accurate, organized staging areas for production materials."
+      ]
+    },
+    {
+      "role": "Electrician",
+      "company": "White Brothers Electric",
+      "location": "Knoxville, TN",
+      "dates": "Jul 2023 - Feb 2024",
+      "bullets": [
+        "Installed electrical systems in new residential construction.",
+        "Performed rough-in inspections and troubleshooting.",
+        "Conducted final electrical checks before inspection approval.",
+        "Handled warranty service calls and diagnosed electrical issues."
+      ]
+    },
+    {
+      "role": "Saw Operator",
+      "company": "The Steel Store",
+      "location": "Cleveland, TN",
+      "dates": "Nov 2022 - Apr 2023",
+      "bullets": [
+        "Cut tool steel to required specifications using industrial saw equipment.",
+        "Operated forklifts and overhead cranes to move materials safely.",
+        "Performed maintenance and preventive maintenance on shop equipment."
+      ]
+    },
+    {
+      "role": "Chief Network Systems Officer",
+      "company": "Unified Global Intelligence",
+      "location": "League City, TX",
+      "dates": "May 2022 - Nov 2022",
+      "bullets": [
+        "Configured and managed communication systems including phones and computers.",
+        "Maintained issued equipment and system reliability.",
+        "Provided IT support and monitored system performance.",
+        "Assisted with staff management and operational oversight."
+      ]
+    },
+    {
+      "role": "Lead Man",
+      "company": "The Steel Store",
+      "location": "Cleveland, TN",
+      "dates": "Nov 2020 - May 2022",
+      "bullets": [
+        "Supervised shop floor operations and coordinated order workflow.",
+        "Processed order documentation and invoices using SAP.",
+        "Operated industrial saws, forklifts, and overhead cranes.",
+        "Verified completed orders before shipment."
+      ]
+    },
+    {
+      "role": "Assembly Technician",
+      "company": "Whirlpool",
+      "location": "Cleveland, TN",
+      "dates": "Jul 2019 - Sep 2020",
+      "bullets": [
+        "Assembled double oven units in a production line environment.",
+        "Installed components and performed quality checks."
+      ]
+    },
+    {
+      "role": "Stocking Associate",
+      "company": "Target",
+      "location": "Cleveland, TN",
+      "dates": "Dec 2017 - Aug 2018",
+      "bullets": [
+        "Unloaded delivery trucks and organized inventory.",
+        "Stocked shelves and maintained merchandise levels.",
+        "Prepared sales floor prior to store opening."
+      ]
+    },
+    {
+      "role": "Security Officer",
+      "company": "SEC Security",
+      "location": "Chattanooga, TN",
+      "dates": "Oct 2017 - Dec 2017",
+      "bullets": [
+        "Patrolled assigned areas and monitored security posts.",
+        "Reported safety and security concerns to supervisors."
+      ]
+    },
+    {
+      "role": "Sheriff's Deputy",
+      "company": "Bradley County Sheriff's Office",
+      "location": "Cleveland, TN",
+      "dates": "Sep 2014 - Oct 2017",
+      "bullets": [
+        "Managed inmate intake and release procedures.",
+        "Conducted security checks of holding areas.",
+        "Maintained safety and order within the county jail facility."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "Walker Valley High School",
+      "location": "Charleston, TN",
+      "credential": "High School Diploma",
+      "dates": "May 2007"
+    }
+  ],
+  "volunteer": [
+    {
+      "role": "IT Administrator (Volunteer)",
+      "organization": "Local Bible College",
+      "location": "Cleveland, TN",
+      "bullets": [
+        "Provided IT support and maintained computer systems.",
+        "Assisted staff with troubleshooting hardware and software issues."
+      ]
+    }
+  ]
+}

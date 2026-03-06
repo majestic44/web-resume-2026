@@ -1,0 +1,192 @@
+{
+  "name": "Jareth Thomas",
+  "title": "Operations, Manufacturing & Skilled Trades Professional",
+  "location": "Charleston, TN",
+  "phone": "(423) 508-4113",
+  "email": "Jareth59@gmail.com",
+  "linkedin": "https://www.linkedin.com/in/jaretht/",
+  "image": "images/profile.png",
+  "images": {
+    "profile": "images/profile.png"
+  },
+  "summary": "Reliable operations and warehouse professional with experience in manufacturing, steel receiving, production assembly, and material handling. Skilled in inventory tracking, equipment operation, and maintaining high safety and productivity standards in fast-paced environments. Experienced with warehouse logistics, computer systems, and team coordination.",
+  "skills": [
+      {
+        "name": "Warehouse & Logistics",
+        "keywords": [
+          "Shipping and Receiving",
+          "Material Handling",
+          "Inventory Tracking",
+          "Order Pulling",
+          "Warehouse Operations",
+          "Production Support"
+        ]
+      },
+      {
+        "name": "Equipment Operation",
+        "keywords": [
+          "Forklift Operation",
+          "Overhead Crane Operation",
+          "Industrial Saw Operation",
+          "Material Handling Equipment",
+          "Warehouse Safety"
+        ]
+      },
+      {
+        "name": "Computer & Technical",
+        "keywords": [
+          "Microsoft Office",
+          "Windows PC Troubleshooting",
+          "Inventory Data Entry Systems",
+          "SAP Order Processing",
+          "Hardware Setup",
+          "Office System Administration"
+        ]
+      },
+      {
+        "name": "Workplace Strengths",
+        "keywords": [
+          "Strong work ethic and reliability",
+          "Ability to work in fast-paced environments",
+          "Team collaboration",
+          "Problem solving and troubleshooting",
+          "Leadership and task coordination"
+        ]
+      }
+    ],
+  "experience": [
+    {
+      "role": "Co-Owner",
+      "company": "MC Handyman LLC",
+      "location": "Cleveland, TN",
+      "dates": "Aug 2025 - Present",
+      "bullets": [
+        "Direct day-to-day operations for a residential repair and property maintenance business, overseeing jobs from estimate through closeout.",
+        "Manage scheduling, customer communication, and job sequencing to keep projects on time and aligned with client expectations.",
+        "Lead project planning, material sourcing, and field execution to reduce delays and maintain steady workflow.",
+        "Resolve electrical and mechanical issues on-site, minimizing callbacks and protecting project timelines.",
+        "Own estimating, invoicing, and service quality standards while maintaining strong client retention and referral volume."
+      ]
+    },
+    {
+      "role": "Coil Receiving",
+      "company": "Gestamp",
+      "location": "Chattanooga, TN",
+      "dates": "Feb 2024 - Aug 2025",
+      "bullets": [
+        "Coordinated receiving and inspection of inbound steel coils to support uninterrupted production schedules.",
+        "Validated shipment data and entered inventory transactions accurately to maintain material traceability and stock control.",
+        "Partnered with purchasing and operations teams on order documentation, helping prevent receiving and staging errors.",
+        "Maintained organized staging and material flow processes that improved floor readiness for production teams."
+      ]
+    },
+    {
+      "role": "Electrician",
+      "company": "White Brothers Electric",
+      "location": "Knoxville, TN",
+      "dates": "Jul 2023 - Feb 2024",
+      "bullets": [
+        "Installed residential electrical systems while coordinating with builders and crews to keep phase deadlines on track.",
+        "Performed rough-in inspections and troubleshooting to resolve issues early and reduce downstream rework.",
+        "Conducted final system checks and quality walkthroughs to support first-pass inspection approval.",
+        "Managed warranty service calls, prioritized repairs, and communicated clear resolution plans to homeowners."
+      ]
+    },
+    {
+      "role": "Saw Operator",
+      "company": "The Steel Store",
+      "location": "Cleveland, TN",
+      "dates": "Nov 2022 - Apr 2023",
+      "bullets": [
+        "Executed precision cutting operations to meet order specifications and delivery requirements.",
+        "Coordinated forklift and overhead crane movement to maintain safe, efficient material flow.",
+        "Performed preventive maintenance and flagged equipment risks early to reduce unplanned downtime."
+      ]
+    },
+    {
+      "role": "Chief Network Systems Officer",
+      "company": "Unified Global Intelligence",
+      "location": "League City, TX",
+      "dates": "May 2022 - Nov 2022",
+      "bullets": [
+        "Administered communication and workstation systems to support reliable day-to-day team operations.",
+        "Standardized equipment setup and maintenance practices to improve system consistency and readiness.",
+        "Delivered frontline IT support and monitored performance, resolving issues quickly to minimize disruptions.",
+        "Supported staffing and operational oversight by coordinating assignments and follow-through across teams."
+      ]
+    },
+    {
+      "role": "Lead Man",
+      "company": "The Steel Store",
+      "location": "Cleveland, TN",
+      "dates": "Nov 2020 - May 2022",
+      "bullets": [
+        "Led daily shop floor workflow, balancing labor and priorities to keep production targets on schedule.",
+        "Managed SAP order documentation and invoicing accuracy to support smooth handoff between departments.",
+        "Trained and supported team members on safe operation of saws, forklifts, and overhead cranes.",
+        "Verified completed orders and quality checkpoints before shipment to reduce customer issues."
+      ]
+    },
+    {
+      "role": "Assembly Technician",
+      "company": "Whirlpool",
+      "location": "Cleveland, TN",
+      "dates": "Jul 2019 - Sep 2020",
+      "bullets": [
+        "Maintained line output by assembling double oven units in a high-volume production environment.",
+        "Completed component installation and in-process quality checks to meet build standards."
+      ]
+    },
+    {
+      "role": "Stocking Associate",
+      "company": "Target",
+      "location": "Cleveland, TN",
+      "dates": "Dec 2017 - Aug 2018",
+      "bullets": [
+        "Coordinated truck unload and backroom organization to keep inbound inventory moving efficiently.",
+        "Replenished sales floor based on demand priorities to maintain product availability.",
+        "Prepared opening-floor standards and merchandising readiness before store launch each day."
+      ]
+    },
+    {
+      "role": "Security Officer",
+      "company": "SEC Security",
+      "location": "Chattanooga, TN",
+      "dates": "Oct 2017 - Dec 2017",
+      "bullets": [
+        "Conducted routine patrols and monitored assigned posts to maintain site safety and policy compliance.",
+        "Documented and escalated safety or security concerns promptly to leadership for corrective action."
+      ]
+    },
+    {
+      "role": "Sheriff's Deputy",
+      "company": "Bradley County Sheriff's Office",
+      "location": "Cleveland, TN",
+      "dates": "Sep 2014 - Oct 2017",
+      "bullets": [
+        "Oversaw inmate intake and release procedures with strict attention to policy and documentation accuracy.",
+        "Performed regular security rounds and compliance checks across holding areas.",
+        "Maintained facility order and responded to incidents to protect staff, inmates, and operational continuity."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "Walker Valley High School",
+      "location": "Charleston, TN",
+      "credential": "High School Diploma",
+      "dates": "May 2007"
+    }
+  ],
+  "volunteer": [
+    {
+      "role": "IT Administrator (Volunteer)",
+      "organization": "Local Bible College",
+      "location": "Cleveland, TN",
+      "bullets": [
+        "Provided IT support and maintained computer systems.",
+        "Assisted staff with troubleshooting hardware and software issues."
+      ]
+    }
+  ]
+}
