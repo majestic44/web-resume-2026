@@ -213,7 +213,7 @@ function renderResume(data) {
     <section class="hero">
       <div class="hero-grid">
         <div>
-          <p class="eyebrow">Professional Portfolio</p>
+          <p class="eyebrow">Professional Resume</p>
           <h1>${escapeHtml(resume.name)}</h1>
           <p class="hero-role">${escapeHtml(resume.headline)}</p>
           <p class="hero-summary">${escapeHtml(resume.summary)}</p>
