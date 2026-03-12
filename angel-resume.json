@@ -1,0 +1,110 @@
+{
+  "template": "classic",
+  "sectionTitles": {
+    "summary": "Professional Summary",
+    "skills": "Core Competencies",
+    "work": "Professional Experience",
+    "education": "Education"
+  },
+  "name": "Angel Cunningham",
+  "title": "Construction, Logistics & Office Administration Professional",
+  "address": "8571 Eureka Road NW, Charleston, TN 37310",
+  "phone": "423-240-8987",
+  "email": "acunningham050709@gmail.com",
+  "summary": "Versatile and dependable professional with experience in construction, logistics, manufacturing, and office administration. Skilled in scheduling, dispatch coordination, inventory management, quality inspection, and equipment operation. Proven ability to streamline workflows, maintain safety standards, and deliver results in fast-paced environments. Strong communicator committed to efficiency, problem-solving, and team collaboration.",
+  "skills": [
+    "Construction & General Labor",
+    "Logistics & Dispatch Coordination",
+    "Inventory Management & Quality Control",
+    "Equipment Operation & Safety Compliance",
+    "Equipment Management & Quality Control",
+    "Office Administration & Scheduling",
+    "Microsoft Office (Word, Outlook)",
+    "Jobber & Warehouse Management Systems"
+  ],
+  "experience": [
+    {
+      "role": "General Laborer / Office Assistant / Dispatcher",
+      "company": "McHandyman LLC",
+      "location": "Cleveland, TN",
+      "dates": "Aug 2025 - Present",
+      "bullets": [
+        "Managed scheduling and dispatch for residential construction projects, ensuring timely completion.",
+        "Performed carpentry, painting, siding, flooring, and general repairs while adhering to safety protocols.",
+        "Maintained project records, invoices, and customer communications using Jobber and Microsoft Office.",
+        "Coordinated technician assignments and work orders to improve team efficiency."
+      ]
+    },
+    {
+      "role": "Logistics Clerk",
+      "company": "Schnellecke Logistics",
+      "location": "Chattanooga, TN",
+      "dates": "May 2024 - Mar 2025",
+      "bullets": [
+        "Monitored and verified incoming shipments, ensuring compliance with purchase orders and quality standards.",
+        "Maintained accurate inventory records and tracked materials via warehouse management systems.",
+        "Investigated discrepancies, coordinated with suppliers, and resolved shipping and delivery issues.",
+        "Assisted in inventory audits, improving accuracy and reducing stock errors."
+      ]
+    },
+    {
+      "role": "Server / Cook",
+      "company": "Waffle House",
+      "location": "Cleveland, TN",
+      "dates": "Aug 2018 - Dec 2024",
+      "bullets": [
+        "Delivered excellent customer service in a fast-paced, high-volume restaurant setting.",
+        "Prepared and cooked menu items following strict recipes and food safety standards.",
+        "Processed POS transactions accurately and handled cash while maintaining order accuracy.",
+        "Resolved customer concerns professionally, supporting smooth team operations."
+      ]
+    },
+    {
+      "role": "Carhop",
+      "company": "Sonic",
+      "location": "Cleveland, TN",
+      "dates": "Jun 2023 - Sept 2023",
+      "bullets": [
+        "Took and delivered customer orders accurately and efficiently.",
+        "Processed payments through POS systems and followed cash-handling policies.",
+        "Collaborated with kitchen and drive-thru teams to ensure order accuracy.",
+        "Maintained clean work areas and restocked supplies.",
+        "Addressed customer issues professionally and promoted menu items."
+      ]
+    },
+    {
+      "role": "Quality Inspector / Machine Operator",
+      "company": "Waupaca Foundry",
+      "location": "Etowah, TN",
+      "dates": "Jan 2020 - Aug 2020",
+      "bullets": [
+        "Operated production machinery and monitored performance to ensure operational efficiency.",
+        "Conducted inspections using precision measurement tools, identifying defects and reporting issues.",
+        "Maintained documentation and ensured compliance with manufacturing quality standards.",
+        "Supported smooth production operations through accurate reporting and issue resolution."
+      ]
+    },
+    {
+      "role": "Line Service",
+      "company": "Duracell",
+      "location": "Cleveland, TN",
+      "dates": "Aug 2015 - Jun 2016",
+      "bullets": [
+        "Operated assembly line machinery for battery production.",
+        "Assembled and packaged products while following quality standards.",
+        "Performed quality checks and identified defects.",
+        "Collaborated with team members to meet production targets.",
+        "Performed basic troubleshooting and equipment maintenance.",
+        "Followed all safety and operational guidelines."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "Walker Valley High School",
+      "location": "Charleston, TN",
+      "credential": "High School Diploma",
+      "dates": "May 2007"
+    }
+  ]
+}
