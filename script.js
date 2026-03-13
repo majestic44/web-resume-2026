@@ -1,5 +1,17 @@
-async function loadResume() {
-  const response = await fetch('resume.json');
+function getPageConfig() {
+  const { body } = document;
+
+  return {
+    resumeSrc: body.dataset.resumeSrc || 'resume.json',
+    template: body.dataset.resumeTemplate || 'modern',
+    pageTitle: body.dataset.pageTitle || document.title,
+    brand: body.dataset.brand || '',
+    brandSubtitle: body.dataset.brandSubtitle || ''
+  };
+}
+
+async function loadResume(resumeSrc) {
+  const response = await fetch(resumeSrc);
   if (!response.ok) throw new Error('Unable to load resume data.');
   return response.json();
 }
@@ -17,6 +29,13 @@ function normalizeResumeData(data) {
   const basics = data.basics || {};
   const fallbackLocation = typeof data.location === 'string' ? data.location : '';
   const locationParts = [basics.location?.city, basics.location?.region, basics.location?.country].filter(Boolean);
+  const sectionTitles = data.sectionTitles || {};
+  const address = data.address || basics.address || '';
+  const summaryLabel = sectionTitles.summary || 'Professional Summary';
+  const skillsLabel = sectionTitles.skills || 'Core Skills';
+  const workLabel = sectionTitles.work || 'Professional Experience';
+  const educationLabel = sectionTitles.education || 'Education';
+  const volunteerLabel = sectionTitles.volunteer || 'Volunteer Work';
 
   const normalizeSkillGroups = inputSkills => {
     if (!Array.isArray(inputSkills) || inputSkills.length === 0) return [];
@@ -37,6 +56,7 @@ function normalizeResumeData(data) {
   };
 
   return {
+    template: data.template || 'modern',
     name: basics.name || data.name || 'Your Name',
     headline: basics.headline || data.title || 'Operations and Systems Professional',
     email: basics.email || data.email || '',
@@ -47,8 +67,16 @@ function normalizeResumeData(data) {
       basics.profiles?.find(profile => (profile.network || '').toLowerCase() === 'linkedin')?.url ||
       '',
     location: locationParts.join(', ') || fallbackLocation,
+    address,
     image: basics.image || data.image || data.images?.profile || '',
     summary: basics.summary || data.summary || '',
+    sectionTitles: {
+      summary: summaryLabel,
+      skills: skillsLabel,
+      work: workLabel,
+      education: educationLabel,
+      volunteer: volunteerLabel
+    },
     skillGroups: normalizeSkillGroups(data.skills),
     work: Array.isArray(data.work)
       ? data.work
@@ -204,12 +232,136 @@ function renderVolunteer(items) {
     .join('');
 }
 
-function renderResume(data) {
-  const resume = normalizeResumeData(data);
-  const root = document.getElementById('resumeRoot');
+function flattenSkills(groups) {
+  return groups.flatMap(group => group.keywords || []);
+}
+
+function renderSectionHeading(title) {
+  return `
+    <div class="classic-section-title" aria-hidden="true">
+      <span class="classic-rule"></span>
+      <h2>${escapeHtml(title)}</h2>
+      <span class="classic-rule"></span>
+    </div>
+  `;
+}
+
+function renderClassicExperience(items) {
+  return items
+    .map(
+      item => `
+        <article class="classic-job">
+          <div class="classic-job-heading">
+            <h3>
+              <span class="classic-company">${escapeHtml(item.company)}</span>
+              <span class="classic-separator"> | </span>
+              <span class="classic-position">${escapeHtml(item.position)}</span>
+            </h3>
+            <div class="classic-job-meta">
+              ${item.location ? `<span>${escapeHtml(item.location)}</span>` : ''}
+              ${
+                item.dateLabel || item.startDate || item.endDate
+                  ? `<span>${escapeHtml(item.dateLabel || formatDateRange(item.startDate, item.endDate))}</span>`
+                  : ''
+              }
+            </div>
+          </div>
+          ${
+            item.highlights?.length
+              ? `<ul class="classic-bullets">${item.highlights
+                  .map(bullet => `<li>${escapeHtml(bullet)}</li>`)
+                  .join('')}</ul>`
+              : ''
+          }
+        </article>
+      `
+    )
+    .join('');
+}
+
+function renderClassicResume(resume) {
+  const skillList = flattenSkills(resume.skillGroups);
+
+  return `
+    <section class="classic-resume">
+      <header class="classic-header">
+        <h1>${escapeHtml(resume.name)}</h1>
+        <div class="classic-contact">
+          ${resume.address ? `<span>${escapeHtml(resume.address)}</span>` : ''}
+          ${resume.phone ? `<span>${escapeHtml(resume.phone)}</span>` : ''}
+          ${resume.email ? `<a href="mailto:${escapeHtml(resume.email)}">${escapeHtml(resume.email)}</a>` : ''}
+        </div>
+      </header>
+
+      <section class="classic-section">
+        ${renderSectionHeading(resume.sectionTitles.summary)}
+        <p class="classic-summary">${escapeHtml(resume.summary)}</p>
+      </section>
+
+      ${
+        skillList.length
+          ? `
+            <section class="classic-section">
+              ${renderSectionHeading(resume.sectionTitles.skills)}
+              <div class="classic-skills">
+                ${skillList
+                  .map(skill => `<div class="classic-skill-item">${escapeHtml(skill)}</div>`)
+                  .join('')}
+              </div>
+            </section>
+          `
+          : ''
+      }
+
+      ${
+        resume.work.length
+          ? `
+            <section class="classic-section">
+              ${renderSectionHeading(resume.sectionTitles.work)}
+              <div class="classic-experience">
+                ${renderClassicExperience(resume.work)}
+              </div>
+            </section>
+          `
+          : ''
+      }
+
+      ${
+        resume.education.length
+          ? `
+            <section class="classic-section">
+              ${renderSectionHeading(resume.sectionTitles.education)}
+              <div class="classic-simple-list">
+                ${resume.education
+                  .map(
+                    item => `
+                      <article class="classic-simple-entry">
+                        <h3>${escapeHtml(item.area)}</h3>
+                        ${
+                          item.institution || item.location
+                            ? `<div class="classic-education-school">${escapeHtml(
+                                [item.institution, item.location].filter(Boolean).join(' | ')
+                              )}</div>`
+                            : ''
+                        }
+                        ${item.endDate ? `<div class="classic-education-date">${escapeHtml(formatDate(item.endDate))}</div>` : ''}
+                      </article>
+                    `
+                  )
+                  .join('')}
+              </div>
+            </section>
+          `
+          : ''
+      }
+    </section>
+  `;
+}
+
+function renderModernResume(resume) {
   const initials = getInitials(resume.name);
 
-  root.innerHTML = `
+  return `
     <section class="hero">
       <div class="hero-grid">
         <div>
@@ -261,6 +413,25 @@ function renderResume(data) {
   `;
 }
 
+function renderResume(data, config) {
+  const resume = normalizeResumeData(data);
+  const root = document.getElementById('resumeRoot');
+  const template = config.template || resume.template || 'modern';
+
+  document.title = config.pageTitle || `${resume.name} | Professional Resume`;
+
+  const brand = document.querySelector('.brand');
+  const brandSub = document.querySelector('.brand-sub');
+
+  if (brand) brand.textContent = config.brand || resume.name;
+  if (brandSub) brandSub.textContent = config.brandSubtitle || 'Professional Resume';
+
+  root.innerHTML =
+    template === 'classic'
+      ? renderClassicResume(resume)
+      : renderModernResume(resume);
+}
+
 function setTheme(theme) {
   const html = document.documentElement;
   const body = document.body;
@@ -308,8 +479,10 @@ document.getElementById('printBtn').addEventListener('click', () => window.print
 
 initTheme();
 
-loadResume()
-  .then(renderResume)
+const pageConfig = getPageConfig();
+
+loadResume(pageConfig.resumeSrc)
+  .then(data => renderResume(data, pageConfig))
   .catch(error => {
     document.getElementById('resumeRoot').innerHTML = `
       <section class="section-wrap">
