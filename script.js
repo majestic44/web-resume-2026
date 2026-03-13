@@ -163,6 +163,7 @@ function normalizeCoverLetterData(data) {
   return {
     name: data.name || 'Your Name',
     headline: data.title || 'Professional',
+    address: data.address || '',
     phone: data.phone || '',
     email: data.email || '',
     linkedin: data.linkedin || '',
@@ -512,6 +513,45 @@ function renderCoverLetter(data) {
   `;
 }
 
+function renderClassicCoverLetter(data) {
+  const letter = normalizeCoverLetterData(data);
+
+  return `
+    <section class="classic-cover-letter">
+      <header class="classic-letter-header">
+        <h1>${escapeHtml(letter.name)}</h1>
+        <div class="classic-letter-contact">
+          ${letter.address ? `<span>${escapeHtml(letter.address)}</span>` : ''}
+          ${letter.phone ? `<span>${escapeHtml(letter.phone)}</span>` : ''}
+          ${letter.email ? `<a href="mailto:${escapeHtml(letter.email)}">${escapeHtml(letter.email)}</a>` : ''}
+        </div>
+      </header>
+
+      <section class="classic-letter-body">
+        <p class="classic-letter-date">${escapeHtml(formatLongDate())}</p>
+
+        <div class="classic-letter-recipient">
+          ${letter.recipientName ? `<p>${escapeHtml(letter.recipientName)}</p>` : ''}
+          ${letter.recipientCompany ? `<p>${escapeHtml(letter.recipientCompany)}</p>` : ''}
+          ${letter.recipientAddress.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+          <p>${escapeHtml(letter.greeting)}</p>
+        </div>
+
+        <article class="classic-letter-content">
+          ${letter.opening ? `<p>${escapeHtml(letter.opening)}</p>` : ''}
+          ${letter.body.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+          ${letter.closing ? `<p>${escapeHtml(letter.closing)}</p>` : ''}
+        </article>
+
+        <div class="classic-letter-signoff">
+          <p>${escapeHtml(letter.signature)}</p>
+          <p>${escapeHtml(letter.name)}</p>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
 function renderCoverLetterEditor(fields) {
   return `
     <div class="modal-backdrop" id="coverLetterModal" aria-hidden="true">
@@ -643,7 +683,10 @@ function renderResume(data, config) {
     if (brand) brand.textContent = config.brand || data.name || 'Cover Letter';
     if (brandSub) brandSub.textContent = config.brandSubtitle || 'Cover Letter';
 
-    root.innerHTML = renderCoverLetter(data);
+    root.innerHTML =
+      config.template === 'classic'
+        ? renderClassicCoverLetter(data)
+        : renderCoverLetter(data);
     return;
   }
 

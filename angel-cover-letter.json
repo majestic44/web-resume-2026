@@ -1,0 +1,21 @@
+{
+  "name": "Angel Cunningham",
+  "title": "Construction, Logistics & Office Administration Professional",
+  "address": "8571 Eureka Road NW, Charleston, TN 37310",
+  "phone": "423-240-8987",
+  "email": "acunningham050709@gmail.com",
+  "recipient": {
+    "name": "Hiring Manager",
+    "company": "",
+    "addressLines": []
+  },
+  "greeting": "Dear Hiring Manager,",
+  "opening": "I am writing to express my interest in the position with your organization. With experience in construction, logistics, manufacturing, customer service, and office administration, I bring a strong work ethic, reliability, and the ability to adapt quickly in fast-paced environments.",
+  "body": [
+    "In my current role with McHandyman LLC, I perform a wide range of responsibilities including construction work, dispatching technicians, coordinating schedules, and assisting with office operations. This position has strengthened my ability to manage multiple priorities, communicate effectively with customers and team members, and ensure projects run smoothly from start to finish.",
+    "Previously, I worked as a Clerk at Schnellecke Logistics, where I inspected incoming shipments, tracked inventory, and resolved discrepancies with suppliers. My experience in manufacturing roles has also provided me with strong skills in equipment operation, quality control, safety compliance, and production processes.",
+    "I take pride in being dependable, detail-oriented, and willing to take initiative. I work well both independently and as part of a team, and I am always looking for ways to improve efficiency and contribute positively to the workplace."
+  ],
+  "closing": "I would welcome the opportunity to discuss how my skills and experience could benefit your team. Thank you for your time and consideration, and I look forward to hearing from you.",
+  "signature": "Sincerely,"
+}
