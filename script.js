@@ -3,6 +3,7 @@ function getPageConfig() {
 
   return {
     resumeSrc: body.dataset.resumeSrc || 'resume.json',
+    documentType: body.dataset.documentType || 'resume',
     template: body.dataset.resumeTemplate || 'modern',
     pageTitle: body.dataset.pageTitle || document.title,
     brand: body.dataset.brand || '',
@@ -14,6 +15,35 @@ async function loadResume(resumeSrc) {
   const response = await fetch(resumeSrc);
   if (!response.ok) throw new Error('Unable to load resume data.');
   return response.json();
+}
+
+function getStorageKey(config) {
+  return `portfolio-${config.documentType}-${config.resumeSrc}`;
+}
+
+function loadStoredData(config) {
+  try {
+    const raw = localStorage.getItem(getStorageKey(config));
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveStoredData(config, data) {
+  try {
+    localStorage.setItem(getStorageKey(config), JSON.stringify(data));
+  } catch (error) {
+    // Ignore storage failures (private mode / restricted contexts).
+  }
+}
+
+function clearStoredData(config) {
+  try {
+    localStorage.removeItem(getStorageKey(config));
+  } catch (error) {
+    // Ignore storage failures (private mode / restricted contexts).
+  }
 }
 
 function escapeHtml(text) {
@@ -111,6 +141,83 @@ function normalizeResumeData(data) {
               : []
         }))
       : []
+  };
+}
+
+function formatLongDate(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function normalizeCoverLetterData(data) {
+  const recipient = data.recipient || {};
+  const recipientAddress = Array.isArray(recipient.addressLines)
+    ? recipient.addressLines.filter(Boolean)
+    : [];
+
+  return {
+    name: data.name || 'Your Name',
+    headline: data.title || 'Professional',
+    phone: data.phone || '',
+    email: data.email || '',
+    linkedin: data.linkedin || '',
+    location: data.location || '',
+    recipientName: recipient.name || 'Hiring Manager',
+    recipientCompany: recipient.company || '',
+    recipientAddress,
+    greeting: data.greeting || 'Dear Hiring Manager,',
+    opening: data.opening || '',
+    body: Array.isArray(data.body) ? data.body.filter(Boolean) : [],
+    closing: data.closing || '',
+    signature: data.signature || 'Sincerely,'
+  };
+}
+
+function coverLetterToEditableFields(data) {
+  const letter = normalizeCoverLetterData(data);
+
+  return {
+    recipientName: letter.recipientName,
+    recipientCompany: letter.recipientCompany,
+    recipientAddress: letter.recipientAddress.join('\n'),
+    greeting: letter.greeting,
+    opening: letter.opening,
+    bodyParagraph1: letter.body[0] || '',
+    bodyParagraph2: letter.body[1] || '',
+    bodyParagraph3: letter.body[2] || '',
+    closing: letter.closing,
+    signature: letter.signature
+  };
+}
+
+function editableFieldsToCoverLetter(fields, baseData) {
+  const recipientAddress = String(fields.recipientAddress || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const body = [fields.bodyParagraph1, fields.bodyParagraph2, fields.bodyParagraph3]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+
+  return {
+    ...baseData,
+    recipient: {
+      ...(baseData.recipient || {}),
+      name: String(fields.recipientName || '').trim(),
+      company: String(fields.recipientCompany || '').trim(),
+      addressLines: recipientAddress
+    },
+    greeting: String(fields.greeting || '').trim(),
+    opening: String(fields.opening || '').trim(),
+    body,
+    closing: String(fields.closing || '').trim(),
+    signature: String(fields.signature || '').trim()
   };
 }
 
@@ -358,6 +465,118 @@ function renderClassicResume(resume) {
   `;
 }
 
+function renderCoverLetter(data) {
+  const letter = normalizeCoverLetterData(data);
+
+  return `
+    <section class="letter-shell">
+      <section class="letter-hero">
+        <div>
+          <h1>${escapeHtml(letter.name)}</h1>
+          <p class="hero-role">${escapeHtml(letter.headline)}</p>
+        </div>
+        <aside class="letter-contact-card">
+          <ul class="hero-links">
+            ${letter.email ? `<li><a href="mailto:${escapeHtml(letter.email)}"><i class="fa-solid fa-envelope"></i>${escapeHtml(letter.email)}</a></li>` : ''}
+            ${letter.phone ? `<li><a href="tel:${escapeHtml(letter.phone.replace(/[^\d+]/g, ''))}"><i class="fa-solid fa-phone"></i>${escapeHtml(letter.phone)}</a></li>` : ''}
+            ${letter.linkedin ? `<li><a href="${escapeHtml(letter.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>LinkedIn Profile</a></li>` : ''}
+            ${letter.location ? `<li><span><i class="fa-solid fa-location-dot"></i>${escapeHtml(letter.location)}</span></li>` : ''}
+          </ul>
+        </aside>
+      </section>
+
+      <section class="letter-body">
+        <div class="letter-meta">
+          <div>
+            <p class="letter-date">${escapeHtml(formatLongDate())}</p>
+            <div class="letter-recipient">
+              <p>${escapeHtml(letter.recipientName)}</p>
+              ${letter.recipientCompany ? `<p>${escapeHtml(letter.recipientCompany)}</p>` : ''}
+              ${letter.recipientAddress.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <article class="letter-content">
+          <p>${escapeHtml(letter.greeting)}</p>
+          ${letter.opening ? `<p>${escapeHtml(letter.opening)}</p>` : ''}
+          ${letter.body.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+          ${letter.closing ? `<p>${escapeHtml(letter.closing)}</p>` : ''}
+          <div class="letter-signoff">
+            <p>${escapeHtml(letter.signature)}</p>
+            <p class="letter-name">${escapeHtml(letter.name)}</p>
+          </div>
+        </article>
+      </section>
+    </section>
+  `;
+}
+
+function renderCoverLetterEditor(fields) {
+  return `
+    <div class="modal-backdrop" id="coverLetterModal" aria-hidden="true">
+      <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="coverLetterModalTitle">
+        <div class="modal-header">
+          <div>
+            <p class="modal-eyebrow">Cover Letter Editor</p>
+            <h2 id="coverLetterModalTitle">Edit letter content</h2>
+          </div>
+          <button class="icon-btn" type="button" data-modal-close aria-label="Close editor">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <form id="coverLetterForm" class="modal-form">
+          <label class="field">
+            <span>Recipient Name</span>
+            <input name="recipientName" type="text" value="${escapeHtml(fields.recipientName)}" />
+          </label>
+          <label class="field">
+            <span>Company</span>
+            <input name="recipientCompany" type="text" value="${escapeHtml(fields.recipientCompany)}" />
+          </label>
+          <label class="field field-full">
+            <span>Company Address</span>
+            <textarea name="recipientAddress" rows="3">${escapeHtml(fields.recipientAddress)}</textarea>
+          </label>
+          <label class="field field-full">
+            <span>Greeting</span>
+            <input name="greeting" type="text" value="${escapeHtml(fields.greeting)}" />
+          </label>
+          <label class="field field-full">
+            <span>Opening Paragraph</span>
+            <textarea name="opening" rows="4">${escapeHtml(fields.opening)}</textarea>
+          </label>
+          <label class="field field-full">
+            <span>Body Paragraph 1</span>
+            <textarea name="bodyParagraph1" rows="4">${escapeHtml(fields.bodyParagraph1)}</textarea>
+          </label>
+          <label class="field field-full">
+            <span>Body Paragraph 2</span>
+            <textarea name="bodyParagraph2" rows="4">${escapeHtml(fields.bodyParagraph2)}</textarea>
+          </label>
+          <label class="field field-full">
+            <span>Body Paragraph 3</span>
+            <textarea name="bodyParagraph3" rows="4">${escapeHtml(fields.bodyParagraph3)}</textarea>
+          </label>
+          <label class="field field-full">
+            <span>Closing Paragraph</span>
+            <textarea name="closing" rows="3">${escapeHtml(fields.closing)}</textarea>
+          </label>
+          <label class="field">
+            <span>Sign-Off</span>
+            <input name="signature" type="text" value="${escapeHtml(fields.signature)}" />
+          </label>
+          <div class="modal-actions">
+            <button class="btn btn-quiet" type="button" id="resetLetterBtn">Reset</button>
+            <button class="btn btn-quiet" type="button" data-modal-close>Cancel</button>
+            <button class="btn" type="submit">Save Changes</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
 function renderModernResume(resume) {
   const initials = getInitials(resume.name);
 
@@ -414,6 +633,20 @@ function renderModernResume(resume) {
 }
 
 function renderResume(data, config) {
+  if (config.documentType === 'cover-letter') {
+    document.title = config.pageTitle || 'Cover Letter';
+
+    const brand = document.querySelector('.brand');
+    const brandSub = document.querySelector('.brand-sub');
+    const root = document.getElementById('resumeRoot');
+
+    if (brand) brand.textContent = config.brand || data.name || 'Cover Letter';
+    if (brandSub) brandSub.textContent = config.brandSubtitle || 'Cover Letter';
+
+    root.innerHTML = renderCoverLetter(data);
+    return;
+  }
+
   const resume = normalizeResumeData(data);
   const root = document.getElementById('resumeRoot');
   const template = config.template || resume.template || 'modern';
@@ -430,6 +663,107 @@ function renderResume(data, config) {
     template === 'classic'
       ? renderClassicResume(resume)
       : renderModernResume(resume);
+}
+
+function initCoverLetterEditor(config, sourceData, activeData) {
+  if (config.documentType !== 'cover-letter') return;
+
+  const trigger = document.getElementById('editLetterBtn');
+  const root = document.getElementById('resumeRoot');
+  if (!trigger || !root) return;
+
+  const initialData = structuredClone ? structuredClone(sourceData) : JSON.parse(JSON.stringify(sourceData));
+  let currentData = structuredClone ? structuredClone(activeData) : JSON.parse(JSON.stringify(activeData));
+
+  const renderCurrentLetter = () => {
+    renderResume(currentData, config);
+  };
+
+  let isModalOpen = false;
+
+  function closeModal() {
+    const modal = document.getElementById('coverLetterModal');
+    if (!modal) return;
+
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    isModalOpen = false;
+  }
+
+  const ensureModal = () => {
+    let modal = document.getElementById('coverLetterModal');
+    if (modal) return modal;
+
+    document.body.insertAdjacentHTML('beforeend', renderCoverLetterEditor(coverLetterToEditableFields(currentData)));
+    modal = document.getElementById('coverLetterModal');
+    const form = document.getElementById('coverLetterForm');
+    const resetBtn = document.getElementById('resetLetterBtn');
+
+    modal.addEventListener('click', event => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const fields = Object.fromEntries(formData.entries());
+
+      currentData = editableFieldsToCoverLetter(fields, currentData);
+      saveStoredData(config, currentData);
+      renderCurrentLetter();
+      closeModal();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      currentData = structuredClone ? structuredClone(initialData) : JSON.parse(JSON.stringify(initialData));
+      clearStoredData(config);
+      renderCurrentLetter();
+      syncForm();
+      closeModal();
+    });
+
+    return modal;
+  };
+
+  const syncForm = () => {
+    const form = document.getElementById('coverLetterForm');
+    if (!form) return;
+
+    const fields = coverLetterToEditableFields(currentData);
+    Object.entries(fields).forEach(([key, value]) => {
+      const control = form.elements.namedItem(key);
+      if (control) control.value = value;
+    });
+  };
+
+  const openModal = () => {
+    const modal = ensureModal();
+    syncForm();
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    isModalOpen = true;
+    const firstInput = document.querySelector('#coverLetterForm input, #coverLetterForm textarea');
+    if (firstInput) firstInput.focus();
+  };
+
+  trigger.addEventListener('click', openModal);
+
+  document.addEventListener('click', event => {
+    if (!isModalOpen) return;
+
+    if (event.target.closest('[data-modal-close]')) {
+      event.preventDefault();
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeModal();
+  });
 }
 
 function setTheme(theme) {
@@ -482,7 +816,13 @@ initTheme();
 const pageConfig = getPageConfig();
 
 loadResume(pageConfig.resumeSrc)
-  .then(data => renderResume(data, pageConfig))
+  .then(data => {
+    const storedData = loadStoredData(pageConfig);
+    const activeData = storedData || data;
+
+    renderResume(activeData, pageConfig);
+    initCoverLetterEditor(pageConfig, data, activeData);
+  })
   .catch(error => {
     document.getElementById('resumeRoot').innerHTML = `
       <section class="section-wrap">

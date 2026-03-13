@@ -55,6 +55,10 @@ body {
   transition: background-color 180ms ease, color 180ms ease;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -217,6 +221,195 @@ body {
 
 .section-wrap {
   padding: 28px 34px 34px;
+}
+
+.letter-shell {
+  background: var(--surface);
+}
+
+.letter-hero {
+  padding: 38px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 20px;
+  align-items: end;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--accent), #0d2445 52%), color-mix(in srgb, var(--accent-2), #072042 65%));
+  color: #f8fbff;
+}
+
+.letter-contact-card {
+  background: rgba(7, 17, 35, 0.28);
+  border: 1px solid rgba(248, 251, 255, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.letter-body {
+  padding: 30px 34px 38px;
+}
+
+.letter-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+  padding-bottom: 22px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line), transparent 14%);
+}
+
+.letter-date {
+  margin: 0 0 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent), var(--ink) 28%);
+}
+
+.letter-recipient p,
+.letter-content p,
+.letter-signoff p {
+  margin: 0;
+}
+
+.letter-recipient {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.letter-content {
+  padding-top: 24px;
+  display: grid;
+  gap: 16px;
+  color: var(--ink);
+}
+
+.letter-content p {
+  line-height: 1.72;
+  font-size: 1.06rem;
+}
+
+.letter-signoff {
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.letter-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.06rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  place-items: center;
+  padding: 20px;
+  background: rgba(7, 16, 30, 0.56);
+  backdrop-filter: blur(8px);
+}
+
+.modal-backdrop.is-open {
+  display: grid;
+}
+
+.modal-dialog {
+  width: min(860px, 100%);
+  max-height: min(88vh, 920px);
+  overflow: auto;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--line), transparent 10%);
+  background: var(--surface);
+  box-shadow: var(--glow);
+  padding: 24px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.modal-eyebrow {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, var(--line), transparent 20%);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.modal-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--line), transparent 10%);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent), transparent 55%);
+  outline-offset: 1px;
+  border-color: color-mix(in srgb, var(--accent), transparent 10%);
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.modal-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
 }
 
 .section {
@@ -572,6 +765,9 @@ body {
   }
 
   .hero-grid,
+  .letter-hero,
+  .letter-meta,
+  .modal-form,
   .two-col,
   .skills-grid {
     grid-template-columns: 1fr;
@@ -591,8 +787,20 @@ body {
     justify-content: center;
   }
 
+  .modal-dialog {
+    padding: 18px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
   .classic-resume {
     padding: 28px 22px 34px;
+  }
+
+  .letter-body {
+    padding: 22px;
   }
 
   .classic-contact {
@@ -630,6 +838,10 @@ body {
   }
 
   .no-print {
+    display: none !important;
+  }
+
+  .modal-backdrop {
     display: none !important;
   }
 
@@ -940,5 +1152,65 @@ body {
   .classic-section:nth-of-type(3) {
     break-before: auto;
     page-break-before: auto;
+  }
+
+  .letter-shell {
+    box-shadow: none;
+  }
+
+  .letter-hero {
+    padding: 10px;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 10px;
+    align-items: start;
+    background: #eef4ff;
+    color: #0f172a;
+    border-bottom: 1px solid #d3def2;
+  }
+
+  .letter-contact-card {
+    background: #f8fbff;
+    border: 1px solid #d3def2;
+    padding: 9px;
+  }
+
+  .letter-body {
+    padding: 10px;
+  }
+
+  .letter-meta {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .letter-date {
+    margin-bottom: 8px;
+    font-size: 9pt;
+  }
+
+  .letter-recipient {
+    gap: 2px;
+    font-size: 8.8pt;
+    color: #334155;
+  }
+
+  .letter-content {
+    padding-top: 10px;
+    gap: 9px;
+  }
+
+  .letter-content p {
+    font-size: 9.4pt;
+    line-height: 1.42;
+  }
+
+  .letter-signoff {
+    gap: 3px;
+    padding-top: 4px;
+  }
+
+  .letter-name {
+    font-size: 9.6pt;
   }
 }

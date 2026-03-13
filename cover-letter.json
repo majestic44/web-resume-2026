@@ -1,0 +1,25 @@
+{
+  "name": "Jareth Thomas",
+  "title": "Operations, Manufacturing & Skilled Trades Professional",
+  "phone": "(423) 508-4113",
+  "email": "Jareth59@gmail.com",
+  "linkedin": "https://www.linkedin.com/in/jaretht/",
+  "location": "Charleston, TN",
+  "recipient": {
+    "name": "Hiring Manager",
+    "company": "Company Name",
+    "addressLines": [
+      "Company Address Line 1",
+      "City, State ZIP"
+    ]
+  },
+  "greeting": "Dear Hiring Manager,",
+  "opening": "I am writing to express my interest in opportunities where I can contribute my background in operations, warehouse logistics, manufacturing support, and hands-on problem solving. Throughout my career, I have built a reputation for reliability, strong follow-through, and the ability to keep work moving in fast-paced environments.",
+  "body": [
+    "My experience spans steel receiving, production support, inventory control, equipment operation, and residential electrical and repair work. In these roles, I have been trusted to manage incoming materials, maintain accurate documentation, troubleshoot issues on the floor or in the field, and coordinate work so teams can stay productive and on schedule.",
+    "Most recently, as Co-Owner of MC Handyman LLC, I have managed scheduling, customer communication, estimating, material sourcing, and project execution from start to finish. That experience strengthened my ability to balance operational priorities, respond quickly to problems, and maintain a high standard of service while working directly with customers and crews.",
+    "I would bring a practical work ethic, safety-minded approach, and a willingness to take ownership of whatever needs to get done. I am comfortable learning new systems, supporting team operations, and stepping into roles that require consistency, adaptability, and strong attention to detail."
+  ],
+  "closing": "Thank you for your time and consideration. I would welcome the opportunity to discuss how my background can support your team.",
+  "signature": "Sincerely,"
+}
