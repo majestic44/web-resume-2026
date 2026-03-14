@@ -168,6 +168,7 @@ function normalizeCoverLetterData(data) {
     email: data.email || '',
     linkedin: data.linkedin || '',
     location: data.location || '',
+    image: data.image || data.images?.profile || '',
     recipientName: recipient.name || 'Hiring Manager',
     recipientCompany: recipient.company || '',
     recipientAddress,
@@ -468,15 +469,24 @@ function renderClassicResume(resume) {
 
 function renderCoverLetter(data) {
   const letter = normalizeCoverLetterData(data);
+  const initials = getInitials(letter.name);
 
   return `
     <section class="letter-shell">
       <section class="letter-hero">
         <div>
+          <p class="eyebrow">Cover Letter</p>
           <h1>${escapeHtml(letter.name)}</h1>
           <p class="hero-role">${escapeHtml(letter.headline)}</p>
         </div>
         <aside class="letter-contact-card">
+          <div class="profile-photo" aria-label="Profile photo">
+            ${
+              letter.image
+                ? `<img src="${escapeHtml(letter.image)}" alt="${escapeHtml(letter.name)}" loading="eager" />`
+                : `<span>${escapeHtml(initials)}</span>`
+            }
+          </div>
           <ul class="hero-links">
             ${letter.email ? `<li><a href="mailto:${escapeHtml(letter.email)}"><i class="fa-solid fa-envelope"></i>${escapeHtml(letter.email)}</a></li>` : ''}
             ${letter.phone ? `<li><a href="tel:${escapeHtml(letter.phone.replace(/[^\d+]/g, ''))}"><i class="fa-solid fa-phone"></i>${escapeHtml(letter.phone)}</a></li>` : ''}

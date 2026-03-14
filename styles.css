@@ -238,6 +238,13 @@ body.modal-open {
   color: #f8fbff;
 }
 
+.letter-hero h1 {
+  margin: 8px 0 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  line-height: 1.06;
+}
+
 .letter-contact-card {
   background: rgba(7, 17, 35, 0.28);
   border: 1px solid rgba(248, 251, 255, 0.2);
@@ -1298,6 +1305,18 @@ body.modal-open {
     background: #eef4ff;
     color: #0f172a;
     border-bottom: 1px solid #d3def2;
+  }
+
+  .letter-hero h1 {
+    margin-top: 4px;
+    font-size: 24pt;
+  }
+
+  .letter-hero .hero-role,
+  .letter-hero .eyebrow,
+  .letter-hero .hero-links a,
+  .letter-hero .hero-links span {
+    color: #0f172a;
   }
 
   .letter-contact-card {
