@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jareth Thomas | Professional Resume</title>
+    <title>Jareth Thomas | Amazon Cover Letter</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,31 +20,32 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body
-    data-resume-src="resume.json"
+    data-resume-src="amazon-cover-letter.json"
+    data-document-type="cover-letter"
     data-resume-template="modern"
-    data-page-title="Jareth Thomas | Professional Resume"
+    data-page-title="Jareth Thomas | Amazon Cover Letter"
     data-brand="Jareth Thomas"
-    data-brand-subtitle="Professional Resume"
+    data-brand-subtitle="Amazon Cover Letter"
   >
     <header class="topbar no-print">
       <div class="topbar-inner">
         <div>
           <strong class="brand">Jareth Thomas</strong>
-          <p class="brand-sub">Professional Resume</p>
+          <p class="brand-sub">Amazon Cover Letter</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn btn-quiet" href="cover-letter.html">
-            <i class="fa-solid fa-envelope-open-text"></i>
-            <span>Cover Letter</span>
-          </a>
           <a class="btn btn-quiet" href="amazon.html">
-            <i class="fa-solid fa-box"></i>
+            <i class="fa-solid fa-file-lines"></i>
             <span>Amazon Resume</span>
           </a>
-          <a class="btn btn-quiet" href="angel.html">
-            <i class="fa-solid fa-file-lines"></i>
-            <span>Angel Resume</span>
+          <a class="btn btn-quiet" href="cover-letter.html">
+            <i class="fa-solid fa-envelope-open-text"></i>
+            <span>Default Letter</span>
           </a>
+          <button id="editLetterBtn" class="btn btn-quiet" type="button">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Edit Letter</span>
+          </button>
           <button id="themeBtn" class="btn btn-quiet" type="button" aria-label="Toggle theme">
             <i class="fa-solid fa-moon"></i>
             <span>Dark</span>

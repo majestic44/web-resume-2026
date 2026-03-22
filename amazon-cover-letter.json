@@ -1,0 +1,25 @@
+{
+  "name": "Jareth Thomas",
+  "title": "Warehouse, Fulfillment & Operations Professional",
+  "phone": "(423) 508-4113",
+  "email": "Jareth59@gmail.com",
+  "linkedin": "https://www.linkedin.com/in/jaretht/",
+  "location": "Charleston, TN",
+  "image": "images/profile.png",
+  "recipient": {
+    "name": "Amazon Hiring Team",
+    "company": "Amazon",
+    "addressLines": [
+      "Charleston, TN"
+    ]
+  },
+  "greeting": "Dear Amazon Hiring Team,",
+  "opening": "I am writing to apply for Amazon warehouse and operations opportunities. My background includes receiving, inventory tracking, production support, material handling, and hands-on problem solving, and I have built a reputation for reliability, strong ownership, and the ability to keep work moving safely in fast-paced environments.",
+  "body": [
+    "My experience includes steel receiving at Gestamp, production support at Whirlpool, stock and truck unload work at Target, and material handling and order workflow responsibilities at The Steel Store. In these roles, I have supported production goals, maintained accurate documentation, helped protect inventory accuracy, and worked with teams to keep operations organized, safe, and productive.",
+    "Most recently, as Co-Owner of MC Handyman LLC, I have managed scheduling, material sourcing, estimates, customer communication, and day-to-day project execution. That work strengthened my ownership mindset and my ability to coordinate moving parts, solve problems quickly, reduce delays, and deliver consistent results while maintaining quality and accountability.",
+    "I would bring a dependable work ethic, safety-minded habits, adaptability, and a willingness to step in wherever the team needs support. I am comfortable learning new systems, working at a fast pace, and helping maintain the operational efficiency and reliability Amazon depends on."
+  ],
+  "closing": "Thank you for your time and consideration. I would welcome the opportunity to discuss how my background can support Amazon's team and day-to-day operations.",
+  "signature": "Sincerely,"
+}
