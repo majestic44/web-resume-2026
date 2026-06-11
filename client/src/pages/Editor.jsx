@@ -1,5 +1,5 @@
 import { Button, Card, Chip, Input, Label, TextArea, TextField } from '@heroui/react';
-import { Eye, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { Eye, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import {
@@ -46,8 +46,10 @@ export function Editor({ authState }) {
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
   const [saveState, setSaveState] = useState('idle');
+  const [publishState, setPublishState] = useState('idle');
   const [savedJsonText, setSavedJsonText] = useState('{}');
   const [statusMessage, setStatusMessage] = useState('');
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
 
   useEffect(() => {
     fetch('/api/profiles')
@@ -89,8 +91,10 @@ export function Editor({ authState }) {
         setDraft(createResumeDraft(startingContent));
         setHistory(draftPayload.history || []);
         setSavedJsonText(JSON.stringify(startingContent, null, 2));
+        setHasSavedDraft(Boolean(draftPayload.draft));
         setStatusMessage(draftPayload.draft ? `Loaded saved draft from ${formatTimestamp(draftPayload.draft.savedAt)}` : 'Loaded source resume');
         setSaveState('idle');
+        setPublishState('idle');
         setStatus('ready');
       })
       .catch(fetchError => {
@@ -123,6 +127,12 @@ export function Editor({ authState }) {
 
   const selectedProfile = profiles.find(profile => profile.slug === selectedSlug);
   const isDirty = Boolean(sourceDocument && generatedJsonText !== savedJsonText);
+  const canEditSelectedProfile = authState.dataSource !== 'database'
+    || (authState.user && editableProfiles.some(profile => profile.slug === selectedSlug));
+  const canPublishDraft = authState.dataSource === 'database'
+    && hasSavedDraft
+    && canEditSelectedProfile
+    && Boolean(authState.user);
 
   const updateDraft = updater => {
     setDraft(current => (typeof updater === 'function' ? updater(current) : updater));
@@ -131,59 +141,107 @@ export function Editor({ authState }) {
   const updateBasics = (key, value) => updateDraft(current => updateNestedValue(current, ['basics', key], value));
   const updateSectionTitle = (key, value) => updateDraft(current => updateNestedValue(current, ['sectionTitles', key], value));
 
-  const resetDraft = () => {
+  const resetDraft = async () => {
     if (!sourceDocument) return;
 
     setSaveState('saving');
+    setPublishState('idle');
     setError('');
 
-    fetch(`/api/drafts/resume/${selectedSlug}`, { method: 'DELETE' })
-      .then(response => {
-        if (!response.ok && response.status !== 204) {
-          throw new Error('Unable to reset saved draft.');
-        }
+    try {
+      const response = await fetch(`/api/drafts/resume/${selectedSlug}`, { method: 'DELETE' });
+      if (!response.ok && response.status !== 204) {
+        throw new Error('Unable to reset saved draft.');
+      }
 
-        setDraft(createResumeDraft(sourceDocument.content));
-        setHistory([]);
-        setSavedJsonText(JSON.stringify(sourceDocument.content, null, 2));
-        setStatusMessage('Draft reset to source resume');
-        setSaveState('idle');
-      })
-      .catch(resetError => {
-        setError(resetError.message);
-        setSaveState('error');
-      });
+      setDraft(createResumeDraft(sourceDocument.content));
+      setSavedJsonText(JSON.stringify(sourceDocument.content, null, 2));
+      setHasSavedDraft(false);
+      setStatusMessage('Draft reset to source resume');
+      setSaveState('idle');
+
+      const draftResponse = await fetch(`/api/drafts/resume/${selectedSlug}`);
+      const draftPayload = draftResponse.ok ? await draftResponse.json() : { history: [] };
+      setHistory(draftPayload.history || []);
+    } catch (resetError) {
+      setError(resetError.message);
+      setSaveState('error');
+    }
   };
 
-  const saveDraft = () => {
+  const saveDraft = async (options = {}) => {
     if (!generatedJson) return;
 
     setSaveState('saving');
+    if (!options.silent) {
+      setPublishState('idle');
+    }
     setError('');
 
-    fetch(`/api/drafts/resume/${selectedSlug}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: generatedJson })
-    })
-      .then(async response => {
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || 'Unable to save draft.');
-        }
-
-        return response.json();
-      })
-      .then(payload => {
-        setSavedJsonText(JSON.stringify(payload.draft.content, null, 2));
-        setHistory(payload.history || []);
-        setStatusMessage(`Draft saved at ${formatTimestamp(payload.draft.savedAt)}`);
-        setSaveState('saved');
-      })
-      .catch(saveError => {
-        setError(saveError.message);
-        setSaveState('error');
+    try {
+      const response = await fetch(`/api/drafts/resume/${selectedSlug}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: generatedJson })
       });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to save draft.');
+      }
+
+      setSavedJsonText(JSON.stringify(payload.draft.content, null, 2));
+      setHistory(payload.history || []);
+      setHasSavedDraft(true);
+      if (!options.silent) {
+        setStatusMessage(`Draft saved at ${formatTimestamp(payload.draft.savedAt)}`);
+      }
+      setSaveState('saved');
+      return payload;
+    } catch (saveError) {
+      setError(saveError.message);
+      setSaveState('error');
+      throw saveError;
+    }
+  };
+
+  const publishDraft = async () => {
+    if (!generatedJson || !selectedSlug) return;
+
+    setPublishState('publishing');
+    setError('');
+
+    try {
+      if (isDirty) {
+        await saveDraft({ silent: true });
+      }
+
+      const response = await fetch(`/api/drafts/resume/${selectedSlug}/publish`, {
+        method: 'POST'
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to publish draft.');
+      }
+
+      const liveContent = {
+        ...payload.document.content,
+        template: payload.document.meta?.template || payload.document.content?.template || draft?.template || 'modern'
+      };
+
+      setSourceDocument({ ...payload.document, content: liveContent });
+      setDraft(createResumeDraft(liveContent));
+      setSavedJsonText(JSON.stringify(liveContent, null, 2));
+      setHistory(payload.history || []);
+      setHasSavedDraft(false);
+      setStatusMessage(`Published to live resume at ${formatTimestamp(payload.document.meta?.updatedAt || payload.publishedAt)}`);
+      setSaveState('idle');
+      setPublishState('published');
+    } catch (publishError) {
+      setError(publishError.message);
+      setPublishState('error');
+    }
   };
 
   return (
@@ -225,6 +283,7 @@ export function Editor({ authState }) {
       </section>
 
       {error ? <p className="editor-error">{error}</p> : null}
+      {publishState === 'published' ? <p className="editor-success">Live resume updated from the latest draft.</p> : null}
       {authState.dataSource === 'database' && authState.user && !editableProfiles.length ? (
         <p className="editor-error">This account does not have any assigned editable profiles yet.</p>
       ) : null}
@@ -298,16 +357,25 @@ export function Editor({ authState }) {
             <div className="toolbar compact">
               <Button
                 type="button"
-                isDisabled={saveState === 'saving' || !isDirty || (authState.dataSource === 'database' && !authState.user)}
-                onPress={saveDraft}
+                isDisabled={saveState === 'saving' || publishState === 'publishing' || !isDirty || !canEditSelectedProfile || (authState.dataSource === 'database' && !authState.user)}
+                onPress={() => saveDraft()}
               >
                 <Save size={16} />
                 <span>{saveState === 'saving' ? 'Saving...' : 'Save Draft'}</span>
               </Button>
               <Button
                 type="button"
+                color="primary"
+                isDisabled={publishState === 'publishing' || saveState === 'saving' || !canPublishDraft}
+                onPress={publishDraft}
+              >
+                <Send size={16} />
+                <span>{publishState === 'publishing' ? 'Publishing...' : 'Publish to Resume'}</span>
+              </Button>
+              <Button
+                type="button"
                 variant="bordered"
-                isDisabled={authState.dataSource === 'database' && !authState.user}
+                isDisabled={saveState === 'saving' || publishState === 'publishing' || !canEditSelectedProfile || (authState.dataSource === 'database' && !authState.user)}
                 onPress={resetDraft}
               >
                 <RotateCcw size={16} />

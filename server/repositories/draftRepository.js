@@ -159,6 +159,96 @@ async function deleteDatabaseDraft(type, slug) {
   await pool.query('DELETE FROM document_draft_versions WHERE document_id = ?', [document.id]);
 }
 
+async function publishDatabaseDraft(type, slug, actorUserId = null) {
+  const document = await findDocumentRecord(type, slug);
+  if (!document) return null;
+
+  const pool = getDatabasePool();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[draftRow]] = await connection.query(
+      `
+        SELECT content_json, saved_at, version_id
+        FROM document_drafts
+        WHERE document_id = ?
+        LIMIT 1
+      `,
+      [document.id]
+    );
+
+    if (!draftRow) {
+      await connection.rollback();
+      return { status: 'missing_draft' };
+    }
+
+    const [[documentRow]] = await connection.query(
+      `
+        SELECT title, template
+        FROM documents
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [document.id]
+    );
+
+    const [[versionRow]] = await connection.query(
+      `
+        SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version
+        FROM document_versions
+        WHERE document_id = ?
+      `,
+      [document.id]
+    );
+
+    const content = typeof draftRow.content_json === 'string'
+      ? JSON.parse(draftRow.content_json)
+      : draftRow.content_json;
+    const nextTemplate = String(content?.template || documentRow.template || 'modern').trim() || 'modern';
+
+    await connection.query(
+      `
+        INSERT INTO document_versions (document_id, version_number, title, template, content_json, change_note, changed_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        document.id,
+        versionRow.next_version,
+        documentRow.title,
+        nextTemplate,
+        JSON.stringify(content),
+        `Published from draft ${draftRow.version_id}`,
+        actorUserId
+      ]
+    );
+
+    await connection.query(
+      `
+        UPDATE documents
+        SET content_json = ?, template = ?, updated_by = ?, updated_at = NOW()
+        WHERE id = ?
+      `,
+      [JSON.stringify(content), nextTemplate, actorUserId, document.id]
+    );
+
+    await connection.query('DELETE FROM document_drafts WHERE document_id = ?', [document.id]);
+
+    await connection.commit();
+
+    return {
+      status: 'published',
+      publishedAt: draftRow.saved_at
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export async function readDraftBundle(type, slug) {
   if (!isDatabaseEnabled()) {
     const draft = await readFileDraft(type, slug);
@@ -188,3 +278,10 @@ export async function deleteDraftBundle(type, slug) {
   await deleteDatabaseDraft(type, slug);
 }
 
+export async function publishDraftBundle(type, slug, actorUserId = null) {
+  if (!isDatabaseEnabled()) {
+    return { status: 'unsupported' };
+  }
+
+  return publishDatabaseDraft(type, slug, actorUserId);
+}

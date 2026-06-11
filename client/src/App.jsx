@@ -1,11 +1,12 @@
 import { Chip } from '@heroui/react';
-import { FilePenLine, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
+import { FilePenLine, FolderPlus, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { DocumentPage } from './pages/DocumentPage.jsx';
 import { Editor } from './pages/Editor.jsx';
 import { Login } from './pages/Login.jsx';
 import { Members } from './pages/Members.jsx';
+import { ProfilesAdmin } from './pages/ProfilesAdmin.jsx';
 import { PublicDirectory } from './pages/PublicDirectory.jsx';
 import { Templates } from './pages/Templates.jsx';
 
@@ -14,12 +15,14 @@ const routes = {
   '/login': Login,
   '/editor': Editor,
   '/members': Members,
+  '/profiles': ProfilesAdmin,
   '/templates': Templates
 };
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/editor', label: 'Editor', icon: FilePenLine },
+  { href: '/profiles', label: 'Profiles', icon: FolderPlus },
   { href: '/members', label: 'Members', icon: Users },
   { href: '/templates', label: 'Templates', icon: Shapes },
   { href: '/login', label: 'Sign In', icon: LogIn }
@@ -54,7 +57,7 @@ export function App() {
 
   const Page = routes[pathname] || Dashboard;
   const visibleNavItems = navItems.filter(item => {
-    if (item.href !== '/members') return true;
+    if (!['/members', '/profiles'].includes(item.href)) return true;
     return authState.dataSource === 'database' && ['owner', 'admin'].includes(authState.user?.role);
   });
   const pageProps = {

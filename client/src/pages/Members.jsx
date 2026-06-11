@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Checkbox, Input, Label, Spinner, TextField } from '@heroui/react';
+import { Alert, Button, Card, Input, Label, Spinner, Switch, TextField } from '@heroui/react';
 import { Save, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
@@ -105,13 +105,18 @@ export function Members({ authState }) {
       const editableProfiles = selected
         ? [...new Set([...previous.editableProfiles, profileSlug])]
         : previous.editableProfiles.filter(slug => slug !== profileSlug);
+      const nextRole = selected && previous.role === 'viewer' ? 'editor' : previous.role;
 
       return {
         ...current,
         [memberId]: {
           ...previous,
+          role: nextRole,
           editableProfiles,
-          saved: false
+          saved: false,
+          autoRoleMessage: selected && previous.role === 'viewer'
+            ? 'Viewer promoted to editor so profile access can be assigned.'
+            : ''
         }
       };
     });
@@ -141,8 +146,13 @@ export function Members({ authState }) {
       })
       .then(payload => {
         const nextMembers = members.map(entry => (entry.id === member.id ? payload.member : entry)).sort(compareMembers);
+        const nextStates = buildMemberStates(nextMembers);
+        nextStates[member.id] = {
+          ...nextStates[member.id],
+          saved: true
+        };
         setMembers(nextMembers);
-        setMemberStates(buildMemberStates(nextMembers));
+        setMemberStates(nextStates);
       })
       .catch(saveError => {
         updateMemberState(member.id, { saving: false, error: saveError.message, saved: false });
@@ -268,6 +278,7 @@ export function Members({ authState }) {
                         value={memberState.role}
                         onChange={event => updateMemberState(member.id, {
                           role: event.target.value,
+                          editableProfiles: event.target.value === 'viewer' ? [] : memberState.editableProfiles,
                           saved: false
                         })}
                       >
@@ -278,23 +289,41 @@ export function Members({ authState }) {
                     <div className="assignment-block">
                       <div className="assignment-header">
                         <strong>Editable Profiles</strong>
-                        <span>{isElevated ? 'All profiles' : `${memberState.editableProfiles.length} assigned`}</span>
+                        <span>
+                          {isElevated
+                            ? 'All profiles'
+                            : memberState.role === 'viewer'
+                              ? 'View-only account'
+                              : `${memberState.editableProfiles.length} assigned`}
+                        </span>
                       </div>
+                      <p className="field-help">
+                        {isElevated
+                          ? 'Owner and admin accounts automatically have access to every family profile.'
+                          : memberState.role === 'viewer'
+                            ? 'Viewer accounts cannot edit profiles. Turning on access promotes the member to editor automatically.'
+                            : 'Editor accounts can only work on the profiles switched on below.'}
+                      </p>
                       <div className="assignment-list">
                         {profiles.map(profile => (
-                          <label className="assignment-item" key={`${member.id}-${profile.slug}`}>
-                            <Checkbox
+                          <label className="assignment-item assignment-item--switch" key={`${member.id}-${profile.slug}`}>
+                            <span className="assignment-item__copy">
+                              <strong>{profile.name}</strong>
+                              <small>{profile.slug}</small>
+                            </span>
+                            <Switch
                               isSelected={isElevated || memberState.editableProfiles.includes(profile.slug)}
                               isDisabled={isElevated || isSelf}
                               onValueChange={selected => toggleProfile(member.id, profile.slug, selected)}
                             />
-                            <span>{profile.name}</span>
                           </label>
                         ))}
                       </div>
                     </div>
 
                     {isSelf ? <p className="field-help">Use another admin account to change your own access.</p> : null}
+                    {memberState.autoRoleMessage ? <p className="assignment-note">{memberState.autoRoleMessage}</p> : null}
+                    {memberState.saved ? <p className="editor-success">Member access saved.</p> : null}
                     {memberState.error ? <p className="editor-error">{memberState.error}</p> : null}
 
                     <div className="toolbar">
@@ -325,7 +354,9 @@ function buildMemberStates(members) {
       role: member.role,
       editableProfiles: member.editableProfiles.includes('*') ? [] : member.editableProfiles,
       saving: false,
-      error: ''
+      error: '',
+      saved: false,
+      autoRoleMessage: ''
     };
     return map;
   }, {});

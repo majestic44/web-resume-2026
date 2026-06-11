@@ -80,7 +80,7 @@ export async function createMemberAccount({ name, email, password, role = 'viewe
 }
 
 export async function updateMemberAccount(memberId, { role, editableProfiles = [] }) {
-  const nextRole = allowedUserRoles.includes(role) ? role : null;
+  let nextRole = allowedUserRoles.includes(role) ? role : null;
   if (!nextRole) {
     throw new Error('A valid role is required.');
   }
@@ -88,6 +88,10 @@ export async function updateMemberAccount(memberId, { role, editableProfiles = [
   const requestedSlugs = Array.isArray(editableProfiles)
     ? [...new Set(editableProfiles.map(slug => String(slug).trim()).filter(Boolean))]
     : [];
+
+  if (nextRole === 'viewer' && requestedSlugs.length > 0) {
+    nextRole = 'editor';
+  }
 
   const pool = getDatabasePool();
   const [existingRows] = await pool.query('SELECT id FROM users WHERE id = ? LIMIT 1', [memberId]);

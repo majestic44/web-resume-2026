@@ -5,7 +5,8 @@ import { destroySession, requireDraftEditor, requireMemberManager, sessionCookie
 import { createMemberAccount, listMembers, updateMemberAccount } from '../repositories/adminRepository.js';
 import { authenticateUser, createUserSession } from '../repositories/authRepository.js';
 import { listProfiles, readDocument } from '../repositories/documentRepository.js';
-import { deleteDraftBundle, readDraftBundle, saveDraftBundle } from '../repositories/draftRepository.js';
+import { deleteDraftBundle, publishDraftBundle, readDraftBundle, saveDraftBundle } from '../repositories/draftRepository.js';
+import { createProfile, listManagedProfiles, updateProfile } from '../repositories/profileRepository.js';
 import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
@@ -99,6 +100,76 @@ apiRouter.get('/admin/members', requireMemberManager, async (req, res, next) => 
     const [members, profiles] = await Promise.all([listMembers(), listProfiles()]);
     res.json({ members, profiles });
   } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles', requireMemberManager, async (req, res, next) => {
+  try {
+    res.json({ profiles: await listManagedProfiles() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles', requireMemberManager, async (req, res, next) => {
+  try {
+    const profile = await createProfile({
+      displayName: req.body?.displayName,
+      slug: req.body?.slug,
+      headline: req.body?.headline,
+      template: req.body?.template
+    }, req.currentUser?.id || null);
+
+    res.status(201).json({ profile });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ error: 'That profile slug is already in use.' });
+      return;
+    }
+
+    if (error.message === 'Display name, slug, and headline are required.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.patch('/admin/profiles/:profileId', requireMemberManager, async (req, res, next) => {
+  try {
+    const profileId = Number(req.params.profileId);
+    if (!Number.isInteger(profileId) || profileId <= 0) {
+      res.status(400).json({ error: 'A valid profile id is required.' });
+      return;
+    }
+
+    const profile = await updateProfile(profileId, {
+      displayName: req.body?.displayName,
+      slug: req.body?.slug,
+      headline: req.body?.headline,
+      template: req.body?.template,
+      status: req.body?.status
+    }, req.currentUser?.id || null);
+
+    if (!profile) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.json({ profile });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ error: 'That profile slug is already in use.' });
+      return;
+    }
+
+    if (['Display name, slug, and headline are required.', 'A valid profile id is required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
     next(error);
   }
 });
@@ -225,6 +296,42 @@ apiRouter.delete('/drafts/resume/:slug', requireDraftEditor, async (req, res, ne
   try {
     await deleteDraftBundle('resume', req.params.slug);
     res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.post('/drafts/resume/:slug/publish', requireDraftEditor, async (req, res, next) => {
+  try {
+    if (getDataSource() !== 'database') {
+      res.status(400).json({ error: 'Publishing drafts requires DATA_SOURCE=database.' });
+      return;
+    }
+
+    const sourceDocument = await readDocument('resume', req.params.slug);
+    if (!sourceDocument) {
+      res.status(404).json({ error: 'Source document not found' });
+      return;
+    }
+
+    const publishResult = await publishDraftBundle('resume', req.params.slug, req.currentUser?.id || null);
+
+    if (publishResult?.status === 'missing_draft') {
+      res.status(400).json({ error: 'There is no saved draft to publish.' });
+      return;
+    }
+
+    const [document, draftBundle] = await Promise.all([
+      readDocument('resume', req.params.slug),
+      readDraftBundle('resume', req.params.slug)
+    ]);
+
+    res.json({
+      document,
+      draft: draftBundle.draft,
+      history: draftBundle.history || [],
+      publishedAt: publishResult?.publishedAt || new Date().toISOString()
+    });
   } catch (error) {
     next(error);
   }

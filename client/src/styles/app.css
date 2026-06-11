@@ -559,6 +559,15 @@ textarea {
   font-weight: 700;
 }
 
+.editor-success {
+  padding: 12px 14px;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #065f46;
+  background: #ecfdf5;
+  font-weight: 700;
+}
+
 .editor-panel {
   max-width: none;
 }
@@ -729,9 +738,40 @@ textarea {
   font-weight: 600;
 }
 
+.assignment-item--switch {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.assignment-item__copy {
+  display: grid;
+  gap: 2px;
+}
+
+.assignment-item__copy strong {
+  font-size: 0.96rem;
+}
+
+.assignment-item__copy small {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.assignment-note {
+  margin: 0;
+  color: #155e75;
+  font-weight: 700;
+}
+
 .snapshot-list.compact div:last-child {
   border-bottom: 0;
   padding-bottom: 0;
+}
+
+.profiles-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
 }
 
 .toolbar.compact {

@@ -36,10 +36,12 @@ http://localhost:5173
 Useful routes:
 
 - `/` - profile directory
-- `/login` - login placeholder
-- `/dashboard` - dashboard shell
-- `/editor` - editor shell
-- `/templates` - template registry shell
+- `/login` - sign in
+- `/dashboard` - admin dashboard
+- `/editor` - resume draft editor
+- `/profiles` - owner/admin profile management
+- `/members` - owner/admin access management
+- `/templates` - template registry
 - `/resume/jareth`
 - `/resume/angel`
 - `/cover-letter/jareth`
@@ -52,6 +54,9 @@ API routes run through Express on port `3000` during local development:
 - `/api/documents/resume/jareth`
 - `/api/documents/cover-letter/jareth`
 - `/api/drafts/resume/:slug`
+- `/api/drafts/resume/:slug/publish`
+- `/api/admin/members`
+- `/api/admin/profiles`
 
 By default, local development uses seed JSON:
 
@@ -95,15 +100,26 @@ The dashboard/editor surface uses HeroUI components with lucide icons. Public re
 
 Tailwind CSS v4 is wired in through the Vite plugin and a CSS-first setup in `client/src/styles/app.css`. You will not see a `tailwind.config.js` unless we later add custom Tailwind configuration that actually needs one.
 
-## Draft Saving
+## Draft and Publish Workflow
 
-Resume drafts can now be saved locally before authentication is added.
+The editor now supports a full draft workflow:
 
-- Draft files are stored under `server/data/drafts/`
-- Each save writes the latest draft plus a lightweight version history
-- Reset in the editor deletes the saved draft and falls back to the source resume JSON
+1. Open `/editor`
+2. Choose a profile and make changes
+3. Use **Save Draft** to store the latest working copy
+4. Use **Publish to Resume** to push the saved draft to the live public resume
+5. Use **Reset** to throw away the active draft and return to the current live resume
 
-When `DATA_SOURCE=database`, the same draft API stores drafts and draft history in MariaDB instead of the local draft files.
+Behavior by data source:
+
+- `DATA_SOURCE=seed`
+  - drafts are stored in `server/data/drafts/`
+  - draft history is stored locally
+  - publishing is intentionally not supported
+- `DATA_SOURCE=database`
+  - drafts and draft history are stored in MariaDB
+  - publish copies the active draft into `documents.content_json`
+  - publish clears the active draft but keeps draft history
 
 ## Authentication
 
@@ -112,7 +128,38 @@ Authentication is active when `DATA_SOURCE=database`.
 - `POST /api/auth/login` creates an HttpOnly session cookie
 - `GET /api/auth/me` returns the current signed-in user
 - `POST /api/auth/logout` clears the session
-- Draft save/reset routes require a signed-in user with `owner`, `admin`, or `editor` role
+- Draft save/reset/publish routes require a signed-in user with `owner`, `admin`, or `editor` access to that profile
+
+## Profile Management
+
+Owner/admin accounts can manage profiles from `/profiles`.
+
+- Create a profile with:
+  - display name
+  - slug
+  - headline
+  - template
+- Each new profile automatically creates:
+  - a default resume document
+  - a default cover letter document
+- Profile updates also keep the linked resume/cover letter template metadata in sync
+
+New profiles show up in:
+
+- the public directory
+- the editor profile selector
+- the member access assignment screen
+
+## Member Access
+
+Owner/admin accounts can manage household members from `/members`.
+
+- `owner` and `admin` automatically get access to all profiles
+- `editor` can edit only the profiles assigned to them
+- `viewer` has no edit access
+- turning on profile access for a viewer automatically promotes them to `editor`
+
+Profile assignment uses HeroUI `Switch` controls so access changes are easier to scan and update.
 
 ## Plesk Deployment
 
@@ -131,18 +178,29 @@ Recommended setup:
 
 ## PDF Export
 
-Use the **Export PDF** button or the browser print dialog.
+Use the **Export PDF** button or the browser print dialog on public resume/cover letter pages.
 Choose:
 
 - Destination: Save as PDF
 - Paper size: Letter
-- Margins: Default
+- Margins: Default or printer default
 - Background graphics: On
 
-## Next Milestone
+Both the `modern` and `classic` templates include dedicated print rules for:
 
-The next build step is authentication and permissions:
+- Letter-sized output
+- hidden navigation and UI controls
+- tighter print spacing
+- better page-break control for sections, cards, and experience entries
+- consistent template-specific typography in print
 
-- add login and role checks
-- gate save/reset/history actions by permissions
-- then add public/private document management
+## Plesk Smoke Test
+
+After deploying to Plesk:
+
+1. Open `/login` and sign in with the seeded admin account
+2. Open `/profiles` and create a new profile
+3. Confirm the new profile appears in `/`, `/editor`, and `/members`
+4. Open `/editor`, save a draft, and publish it
+5. Open `/resume/{slug}` and verify the live page updated
+6. Use **Export PDF** on the resume and cover letter pages to verify print output
