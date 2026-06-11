@@ -316,7 +316,11 @@ export function Members({ authState }) {
                               isSelected={isElevated || memberState.editableProfiles.includes(profile.slug)}
                               isDisabled={isElevated || isSelf}
                               onValueChange={selected => toggleProfile(member.id, profile.slug, selected)}
-                            />
+                            >
+                              <Switch.Control>
+                                <Switch.Thumb />
+                              </Switch.Control>
+                            </Switch>
                           </div>
                         ))}
                       </div>
