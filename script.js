@@ -11,6 +11,10 @@ function getPageConfig() {
   };
 }
 
+const PRINT_EXPERIENCE_LIMIT = 12;
+const ADMIN_UNLOCK_CODE = 'edit';
+const ADMIN_UNLOCK_STORAGE_KEY = 'portfolio-admin-unlocked';
+
 async function loadResume(resumeSrc) {
   const response = await fetch(resumeSrc);
   if (!response.ok) throw new Error('Unable to load resume data.');
@@ -64,6 +68,7 @@ function normalizeResumeData(data) {
   const summaryLabel = sectionTitles.summary || 'Professional Summary';
   const skillsLabel = sectionTitles.skills || 'Core Skills';
   const workLabel = sectionTitles.work || 'Professional Experience';
+  const strengthsLabel = sectionTitles.strengths || 'Selected Strengths';
   const educationLabel = sectionTitles.education || 'Education';
   const volunteerLabel = sectionTitles.volunteer || 'Volunteer Work';
 
@@ -102,11 +107,17 @@ function normalizeResumeData(data) {
     summary: basics.summary || data.summary || '',
     sectionTitles: {
       summary: summaryLabel,
+      strengths: strengthsLabel,
       skills: skillsLabel,
       work: workLabel,
       education: educationLabel,
       volunteer: volunteerLabel
     },
+    selectedStrengths: Array.isArray(data.selectedStrengths)
+      ? [...new Set(data.selectedStrengths.filter(Boolean))]
+      : Array.isArray(data.strengths)
+        ? [...new Set(data.strengths.filter(Boolean))]
+        : [],
     skillGroups: normalizeSkillGroups(data.skills),
     work: Array.isArray(data.work)
       ? data.work
@@ -286,11 +297,16 @@ function renderSkillGroups(groups) {
     .join('');
 }
 
+function isCurrentExperience(item) {
+  const dateText = item.dateLabel || formatDateRange(item.startDate, item.endDate);
+  return /\b(present|current)\b/i.test(dateText);
+}
+
 function renderExperience(items) {
   return items
     .map(
-      item => `
-      <article class="timeline-item">
+      (item, index) => `
+      <article class="timeline-item${isCurrentExperience(item) ? ' current-role' : ''}${index >= PRINT_EXPERIENCE_LIMIT ? ' print-over-experience-limit' : ''}">
         <div class="role-row">
           <div>
             <h3 class="role-title">${escapeHtml(item.position)}</h3>
@@ -345,6 +361,14 @@ function flattenSkills(groups) {
   return groups.flatMap(group => group.keywords || []);
 }
 
+function renderStrengths(items) {
+  return `
+    <div class="strength-list">
+      ${items.map(strength => `<span class="strength-item">${escapeHtml(strength)}</span>`).join('')}
+    </div>
+  `;
+}
+
 function renderSectionHeading(title) {
   return `
     <div class="classic-section-title" aria-hidden="true">
@@ -358,8 +382,8 @@ function renderSectionHeading(title) {
 function renderClassicExperience(items) {
   return items
     .map(
-      item => `
-        <article class="classic-job">
+      (item, index) => `
+        <article class="classic-job${index >= PRINT_EXPERIENCE_LIMIT ? ' print-over-experience-limit' : ''}">
           <div class="classic-job-heading">
             <h3>
               <span class="classic-company">${escapeHtml(item.company)}</span>
@@ -399,6 +423,7 @@ function renderClassicResume(resume) {
           ${resume.address ? `<span>${escapeHtml(resume.address)}</span>` : ''}
           ${resume.phone ? `<span>${escapeHtml(resume.phone)}</span>` : ''}
           ${resume.email ? `<a href="mailto:${escapeHtml(resume.email)}">${escapeHtml(resume.email)}</a>` : ''}
+          ${resume.linkedin ? `<a href="${escapeHtml(resume.linkedin)}">${escapeHtml(resume.linkedin)}</a>` : ''}
         </div>
       </header>
 
@@ -406,6 +431,21 @@ function renderClassicResume(resume) {
         ${renderSectionHeading(resume.sectionTitles.summary)}
         <p class="classic-summary">${escapeHtml(resume.summary)}</p>
       </section>
+
+      ${
+        resume.selectedStrengths.length
+          ? `
+            <section class="classic-section">
+              ${renderSectionHeading(resume.sectionTitles.strengths)}
+              <div class="classic-strengths">
+                ${resume.selectedStrengths
+                  .map(strength => `<div class="classic-skill-item">${escapeHtml(strength)}</div>`)
+                  .join('')}
+              </div>
+            </section>
+          `
+          : ''
+      }
 
       ${
         skillList.length
@@ -490,7 +530,7 @@ function renderCoverLetter(data) {
           <ul class="hero-links">
             ${letter.email ? `<li><a href="mailto:${escapeHtml(letter.email)}"><i class="fa-solid fa-envelope"></i>${escapeHtml(letter.email)}</a></li>` : ''}
             ${letter.phone ? `<li><a href="tel:${escapeHtml(letter.phone.replace(/[^\d+]/g, ''))}"><i class="fa-solid fa-phone"></i>${escapeHtml(letter.phone)}</a></li>` : ''}
-            ${letter.linkedin ? `<li><a href="${escapeHtml(letter.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>LinkedIn Profile</a></li>` : ''}
+            ${letter.linkedin ? `<li><a href="${escapeHtml(letter.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>${escapeHtml(letter.linkedin)}</a></li>` : ''}
             ${letter.location ? `<li><span><i class="fa-solid fa-location-dot"></i>${escapeHtml(letter.location)}</span></li>` : ''}
           </ul>
         </aside>
@@ -650,7 +690,7 @@ function renderModernResume(resume) {
           <ul class="hero-links">
             ${resume.email ? `<li><a href="mailto:${escapeHtml(resume.email)}"><i class="fa-solid fa-envelope"></i>${escapeHtml(resume.email)}</a></li>` : ''}
             ${resume.phone ? `<li><a href="tel:${escapeHtml(resume.phone.replace(/[^\d+]/g, ''))}"><i class="fa-solid fa-phone"></i>${escapeHtml(resume.phone)}</a></li>` : ''}
-            ${resume.linkedin ? `<li><a href="${escapeHtml(resume.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>LinkedIn Profile</a></li>` : ''}
+            ${resume.linkedin ? `<li><a href="${escapeHtml(resume.linkedin)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i>${escapeHtml(resume.linkedin)}</a></li>` : ''}
             ${resume.location ? `<li><span><i class="fa-solid fa-location-dot"></i>${escapeHtml(resume.location)}</span></li>` : ''}
           </ul>
         </aside>
@@ -658,24 +698,42 @@ function renderModernResume(resume) {
     </section>
 
     <section class="section-wrap">
-      <section class="section">
-        <h2>Core Skills</h2>
+      ${
+        resume.selectedStrengths.length
+          ? `
+            <section class="section section-strengths">
+              <h2>${escapeHtml(resume.sectionTitles.strengths)}</h2>
+              ${renderStrengths(resume.selectedStrengths)}
+            </section>
+          `
+          : ''
+      }
+
+      <section class="section section-skills">
+        <h2>${escapeHtml(resume.sectionTitles.skills)}</h2>
         <div class="skills-grid">${renderSkillGroups(resume.skillGroups)}</div>
       </section>
 
-      <section class="section">
-        <h2>Experience Timeline</h2>
+      <section class="section section-experience">
+        <h2>${escapeHtml(resume.sectionTitles.work)}</h2>
         <div class="timeline">${renderExperience(resume.work)}</div>
       </section>
 
-      <section class="section two-col">
+      ${
+        resume.volunteer.length
+          ? `
+            <section class="section section-volunteer">
+              <h2>${escapeHtml(resume.sectionTitles.volunteer)}</h2>
+              ${renderVolunteer(resume.volunteer)}
+            </section>
+          `
+          : ''
+      }
+
+      <section class="section section-education">
         <div>
-          <h2>Education</h2>
+          <h2>${escapeHtml(resume.sectionTitles.education)}</h2>
           ${renderEducation(resume.education)}
-        </div>
-        <div>
-          <h2>Volunteer Work</h2>
-          ${renderVolunteer(resume.volunteer)}
         </div>
       </section>
     </section>
@@ -862,25 +920,85 @@ function initTheme() {
   });
 }
 
-document.getElementById('printBtn').addEventListener('click', () => window.print());
+function isAdminUnlocked() {
+  try {
+    return sessionStorage.getItem(ADMIN_UNLOCK_STORAGE_KEY) === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+function setAdminUnlocked(isUnlocked) {
+  document.body.classList.toggle('admin-unlocked', isUnlocked);
+
+  const button = document.getElementById('adminUnlockBtn');
+  if (button) {
+    button.innerHTML = isUnlocked
+      ? '<i class="fa-solid fa-lock-open"></i><span>Lock</span>'
+      : '<i class="fa-solid fa-lock"></i><span>Unlock</span>';
+    button.setAttribute('aria-label', isUnlocked ? 'Lock editing' : 'Unlock editing');
+  }
+
+  try {
+    if (isUnlocked) {
+      sessionStorage.setItem(ADMIN_UNLOCK_STORAGE_KEY, 'true');
+    } else {
+      sessionStorage.removeItem(ADMIN_UNLOCK_STORAGE_KEY);
+    }
+  } catch (error) {
+    // Ignore storage failures (private mode / restricted contexts).
+  }
+}
+
+function initAdminControls() {
+  const unlockButton = document.getElementById('adminUnlockBtn');
+  const adminOnlyControls = document.querySelectorAll('[data-admin-only]');
+
+  if (!unlockButton && adminOnlyControls.length === 0) return;
+
+  setAdminUnlocked(isAdminUnlocked());
+
+  if (!unlockButton) return;
+
+  unlockButton.addEventListener('click', () => {
+    if (document.body.classList.contains('admin-unlocked')) {
+      setAdminUnlocked(false);
+      return;
+    }
+
+    const enteredCode = window.prompt('Enter edit passcode');
+    if (enteredCode === ADMIN_UNLOCK_CODE) {
+      setAdminUnlocked(true);
+    }
+  });
+}
+
+const printButton = document.getElementById('printBtn');
+if (printButton) {
+  printButton.addEventListener('click', () => window.print());
+}
 
 initTheme();
+initAdminControls();
 
 const pageConfig = getPageConfig();
+const resumeRoot = document.getElementById('resumeRoot');
 
-loadResume(pageConfig.resumeSrc)
-  .then(data => {
-    const storedData = loadStoredData(pageConfig);
-    const activeData = storedData || data;
+if (resumeRoot) {
+  loadResume(pageConfig.resumeSrc)
+    .then(data => {
+      const storedData = loadStoredData(pageConfig);
+      const activeData = storedData || data;
 
-    renderResume(activeData, pageConfig);
-    initCoverLetterEditor(pageConfig, data, activeData);
-  })
-  .catch(error => {
-    document.getElementById('resumeRoot').innerHTML = `
-      <section class="section-wrap">
-        <h2>Unable to load resume</h2>
-        <p>${escapeHtml(error.message)}</p>
-      </section>
-    `;
-  });
+      renderResume(activeData, pageConfig);
+      initCoverLetterEditor(pageConfig, data, activeData);
+    })
+    .catch(error => {
+      resumeRoot.innerHTML = `
+        <section class="section-wrap">
+          <h2>Unable to load resume</h2>
+          <p>${escapeHtml(error.message)}</p>
+        </section>
+      `;
+    });
+}

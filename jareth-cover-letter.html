@@ -34,26 +34,34 @@
           <p class="brand-sub">Cover Letter</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn btn-quiet" href="index.html">
-            <i class="fa-solid fa-file-lines"></i>
-            <span>Resume</span>
-          </a>
-          <a class="btn btn-quiet" href="amazon-cover-letter.html">
-            <i class="fa-solid fa-box"></i>
-            <span>Amazon Letter</span>
-          </a>
-          <button id="editLetterBtn" class="btn btn-quiet" type="button">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <span>Edit Letter</span>
-          </button>
-          <button id="themeBtn" class="btn btn-quiet" type="button" aria-label="Toggle theme">
-            <i class="fa-solid fa-moon"></i>
-            <span>Dark</span>
-          </button>
-          <button id="printBtn" class="btn" type="button">
-            <i class="fa-solid fa-file-pdf"></i>
-            <span>Export PDF</span>
-          </button>
+          <nav class="topbar-group" aria-label="Resume pages">
+            <a class="btn btn-quiet" href="index.html">
+              <i class="fa-solid fa-address-card"></i>
+              <span>Profiles</span>
+            </a>
+            <a class="btn btn-quiet" href="jareth.html">
+              <i class="fa-solid fa-file-lines"></i>
+              <span>Resume</span>
+            </a>
+          </nav>
+          <div class="topbar-group topbar-tools" aria-label="Cover letter tools">
+            <button id="adminUnlockBtn" class="btn btn-quiet" type="button" aria-label="Unlock editing">
+              <i class="fa-solid fa-lock"></i>
+              <span>Unlock</span>
+            </button>
+            <button id="editLetterBtn" class="btn btn-quiet admin-only" type="button" data-admin-only>
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span>Edit Letter</span>
+            </button>
+            <button id="themeBtn" class="btn btn-quiet" type="button" aria-label="Toggle theme">
+              <i class="fa-solid fa-moon"></i>
+              <span>Dark</span>
+            </button>
+            <button id="printBtn" class="btn" type="button">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Export PDF</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
