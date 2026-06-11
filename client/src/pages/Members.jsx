@@ -306,17 +306,18 @@ export function Members({ authState }) {
                       </p>
                       <div className="assignment-list">
                         {profiles.map(profile => (
-                          <label className="assignment-item assignment-item--switch" key={`${member.id}-${profile.slug}`}>
+                          <div className="assignment-item assignment-item--switch" key={`${member.id}-${profile.slug}`}>
                             <span className="assignment-item__copy">
                               <strong>{profile.name}</strong>
                               <small>{profile.slug}</small>
                             </span>
                             <Switch
+                              aria-label={`Allow ${member.name} to edit ${profile.name}`}
                               isSelected={isElevated || memberState.editableProfiles.includes(profile.slug)}
                               isDisabled={isElevated || isSelf}
                               onValueChange={selected => toggleProfile(member.id, profile.slug, selected)}
                             />
-                          </label>
+                          </div>
                         ))}
                       </div>
                     </div>
