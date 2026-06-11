@@ -315,7 +315,7 @@ export function Members({ authState }) {
                               aria-label={`Allow ${member.name} to edit ${profile.name}`}
                               isSelected={isElevated || memberState.editableProfiles.includes(profile.slug)}
                               isDisabled={isElevated || isSelf}
-                              onValueChange={selected => toggleProfile(member.id, profile.slug, selected)}
+                              onChange={selected => toggleProfile(member.id, profile.slug, selected)}
                             >
                               <Switch.Control>
                                 <Switch.Thumb />
