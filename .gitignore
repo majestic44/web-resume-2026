@@ -1,0 +1,7 @@
+.env
+.DS_Store
+vendor/
+node_modules/
+dist/
+server/data/drafts/*.json
+server/data/drafts/**/*.json

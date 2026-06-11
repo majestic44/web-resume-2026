@@ -5,7 +5,7 @@
   "email": "Jareth59@gmail.com",
   "linkedin": "https://www.linkedin.com/in/jaretht/",
   "location": "Charleston, TN",
-  "image": "images/profile.png",
+  "image": "/images/profile.png",
   "recipient": {
     "name": "Hiring Manager",
     "company": "Company Name",

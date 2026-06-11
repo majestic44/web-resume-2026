@@ -5,9 +5,9 @@
   "phone": "(423) 508-4113",
   "email": "Jareth59@gmail.com",
   "linkedin": "https://www.linkedin.com/in/jaretht/",
-  "image": "images/profile.png",
+  "image": "/images/profile.png",
   "images": {
-    "profile": "images/profile.png"
+    "profile": "/images/profile.png"
   },
   "sectionTitles": {
     "strengths": "Selected Strengths",
