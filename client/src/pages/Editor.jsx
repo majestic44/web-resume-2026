@@ -1,6 +1,7 @@
 import { Button, Card, Chip, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Eye, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { addBodyParagraph, coverLetterDraftToJson, createCoverLetterDraft, removeArrayItem as removeCoverLetterArrayItem } from '../lib/coverLetterDraft.js';
 import {
@@ -14,7 +15,8 @@ import { templateOptions } from '../templates/registry.js';
 
 const documentTypeOptions = [
   { id: 'resume', label: 'Resume' },
-  { id: 'cover-letter', label: 'Cover Letter' }
+  { id: 'cover-letter', label: 'Cover Letter' },
+  { id: 'portfolio', label: 'Portfolio' }
 ];
 
 const editorSections = {
@@ -31,6 +33,9 @@ const editorSections = {
     { id: 'recipient', label: 'Recipient' },
     { id: 'content', label: 'Content' },
     { id: 'json', label: 'JSON Preview' }
+  ],
+  portfolio: [
+    { id: 'projects', label: 'Projects' }
   ]
 };
 
@@ -59,18 +64,29 @@ function draftToJsonForType(type, draft) {
 }
 
 function documentPreviewPath(type, slug) {
+  if (type === 'portfolio') return `/profile/${slug}`;
   return type === 'cover-letter' ? `/cover-letter/${slug}` : `/resume/${slug}`;
 }
 
 function documentTypeTitle(type) {
+  if (type === 'portfolio') return 'portfolio';
   return type === 'cover-letter' ? 'cover letter' : 'resume';
 }
 
 function documentTypeHeadline(type) {
+  if (type === 'portfolio') return 'Portfolio manager';
   return type === 'cover-letter' ? 'Cover letter editor' : 'Resume editor';
 }
 
 function documentCountSummary(type, json) {
+  if (type === 'portfolio') {
+    return [
+      { label: 'Projects', value: '-' },
+      { label: 'Public', value: '-' },
+      { label: 'Featured', value: '-' }
+    ];
+  }
+
   if (type === 'cover-letter') {
     return [
       { label: 'Paragraphs', value: json?.body?.length || 0 },
@@ -125,6 +141,19 @@ export function Editor({ authState }) {
   useEffect(() => {
     if (!selectedSlug) return;
 
+    if (selectedDocumentType === 'portfolio') {
+      setSourceDocument(null);
+      setDraft(null);
+      setHistory([]);
+      setSavedJsonText('{}');
+      setHasSavedDraft(false);
+      setStatusMessage('Portfolio items are managed directly for the selected profile.');
+      setSaveState('idle');
+      setPublishState('idle');
+      setStatus('ready');
+      return;
+    }
+
     setStatus('loading');
     setError('');
 
@@ -166,7 +195,7 @@ export function Editor({ authState }) {
   }, [selectedSlug, selectedDocumentType]);
 
   const generatedJson = useMemo(
-    () => (draft ? draftToJsonForType(selectedDocumentType, draft) : null),
+    () => (selectedDocumentType === 'portfolio' || !draft ? null : draftToJsonForType(selectedDocumentType, draft)),
     [draft, selectedDocumentType]
   );
   const generatedJsonText = useMemo(() => JSON.stringify(generatedJson || {}, null, 2), [generatedJson]);
@@ -191,7 +220,8 @@ export function Editor({ authState }) {
   }, [editableProfiles, selectedSlug]);
 
   const selectedProfile = profiles.find(profile => profile.slug === selectedSlug);
-  const isDirty = Boolean(sourceDocument && generatedJsonText !== savedJsonText);
+  const isPortfolioMode = selectedDocumentType === 'portfolio';
+  const isDirty = !isPortfolioMode && Boolean(sourceDocument && generatedJsonText !== savedJsonText);
   const canEditSelectedProfile = authState.dataSource !== 'database'
     || (authState.user && editableProfiles.some(profile => profile.slug === selectedSlug));
   const canPublishDraft = authState.dataSource === 'database'
@@ -315,7 +345,9 @@ export function Editor({ authState }) {
     <>
       <PageHeader eyebrow="Editor Draft" title={documentTypeHeadline(selectedDocumentType)}>
         <p>
-          {authState.dataSource === 'database'
+          {selectedDocumentType === 'portfolio'
+            ? 'Manage each profile portfolio from the same editor workspace used for resumes and cover letters. Add project cards with images, descriptions, links, type, and progress.'
+            : authState.dataSource === 'database'
             ? authState.user
               ? `Edits save to protected draft history for the signed-in account before you publish the live ${documentTypeTitle(selectedDocumentType)}.`
               : 'Database mode requires sign-in before draft changes can be saved.'
@@ -342,15 +374,17 @@ export function Editor({ authState }) {
             <select
               value={draft?.template || selectedProfile?.template || 'modern'}
               onChange={event => updateDraft(current => ({ ...current, template: event.target.value }))}
-              disabled={!draft}
+              disabled={!draft || isPortfolioMode}
             >
               {templateOptions.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
             </select>
           </label>
         </div>
         <div className="editor-status">
-          <Chip color={isDirty ? 'warning' : 'success'} variant="soft">{isDirty ? 'Unsaved draft' : 'Synced to source'}</Chip>
-          {draft?.template ? <Chip variant="flat">{draft.template}</Chip> : selectedProfile ? <Chip variant="flat">{selectedProfile.template}</Chip> : null}
+          <Chip color={isPortfolioMode ? 'primary' : (isDirty ? 'warning' : 'success')} variant="soft">
+            {isPortfolioMode ? 'Portfolio workspace' : (isDirty ? 'Unsaved draft' : 'Synced to source')}
+          </Chip>
+          {!isPortfolioMode && (draft?.template ? <Chip variant="flat">{draft.template}</Chip> : selectedProfile ? <Chip variant="flat">{selectedProfile.template}</Chip> : null)}
           {statusMessage ? <Chip variant="bordered">{statusMessage}</Chip> : null}
         </div>
       </section>
@@ -361,6 +395,9 @@ export function Editor({ authState }) {
         <p className="editor-error">This account does not have any assigned editable profiles yet.</p>
       ) : null}
 
+      {isPortfolioMode ? (
+        <PortfolioWorkspace authState={authState} profile={selectedProfile} />
+      ) : (
       <section className="editor-layout wide">
         <Card>
           <Card.Content className="section-list" aria-label="Editor sections">
@@ -476,6 +513,7 @@ export function Editor({ authState }) {
           </Card.Content>
         </Card>
       </section>
+      )}
     </>
   );
 }

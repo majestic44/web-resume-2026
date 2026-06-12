@@ -21,6 +21,15 @@ function getAssetLabel(asset) {
   return 'Open Link';
 }
 
+function getProgressLabel(value) {
+  return ({
+    planned: 'Planned',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    on_hold: 'On Hold'
+  })[value] || '';
+}
+
 export function ProfilePublic({ pathname }) {
   const slug = useMemo(() => pathname.split('/')[2] || '', [pathname]);
   const [state, setState] = useState({ status: 'loading', payload: null });
@@ -116,44 +125,40 @@ export function ProfilePublic({ pathname }) {
           <section className="portfolio-grid" aria-label="Portfolio items">
             {portfolioItems.map(item => {
               const imageAssets = (item.assets || []).filter(asset => asset.assetType === 'image' && getAssetHref(asset));
+              const leadImage = imageAssets[0] || null;
               const supportingAssets = (item.assets || []).filter(asset => asset.assetType !== 'image' && getAssetHref(asset));
 
               return (
                 <article className="portfolio-card" key={item.id || item.slug}>
+                  {leadImage ? (
+                    <a
+                      className="portfolio-card__cover-link"
+                      href={getAssetHref(leadImage)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <img
+                        className="portfolio-card__cover-image"
+                        src={getAssetHref(leadImage)}
+                        alt={leadImage.label || item.title}
+                        loading="lazy"
+                      />
+                    </a>
+                  ) : null}
+
                   <div className="portfolio-card__header">
                     <div className="portfolio-card__icon">
                       <BriefcaseBusiness size={18} />
                     </div>
                     <div>
-                      <p className="card-label">{item.category || 'Portfolio Item'}</p>
+                      <p className="card-label">{item.projectType || item.category || 'Portfolio Item'}</p>
                       <h3>{item.title}</h3>
+                      <div className="portfolio-card__meta-row">
+                        {item.projectType ? <span>{item.projectType}</span> : null}
+                        {item.projectProgress ? <span>{getProgressLabel(item.projectProgress)}</span> : null}
+                      </div>
                     </div>
                   </div>
-
-                  {imageAssets.length ? (
-                    <div className={`portfolio-card__gallery${imageAssets.length === 1 ? ' portfolio-card__gallery--single' : ''}`}>
-                      {imageAssets.map((asset, index) => {
-                        const href = getAssetHref(asset);
-                        return (
-                          <a
-                            key={asset.id || `${item.id}-${asset.label}-${href}`}
-                            className="portfolio-card__image-link"
-                            href={href}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <img
-                              className="portfolio-card__image"
-                              src={href}
-                              alt={asset.label || `${item.title} project photo ${index + 1}`}
-                              loading="lazy"
-                            />
-                            {asset.label ? <span className="portfolio-card__image-caption">{asset.label}</span> : null}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  ) : null}
 
                   {item.summary ? <p className="portfolio-card__summary">{item.summary}</p> : null}
                   {item.description ? <p className="portfolio-card__description">{item.description}</p> : null}

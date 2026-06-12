@@ -24,6 +24,21 @@ function normalizeVisibility(value) {
   return ['private', 'shared', 'public'].includes(value) ? value : 'private';
 }
 
+function normalizeProjectType(value) {
+  return String(value || '')
+    .trim()
+    .slice(0, 120);
+}
+
+function normalizeProjectProgress(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  return ['planned', 'in_progress', 'completed', 'on_hold'].includes(normalized) ? normalized : '';
+}
+
 function normalizeSkills(input) {
   if (Array.isArray(input)) {
     return [...new Set(input.map(item => String(item || '').trim()).filter(Boolean))];
@@ -81,6 +96,8 @@ function sanitizePortfolioItem(row, assets = []) {
     summary: row.summary || '',
     description: row.description || '',
     category: row.category || '',
+    projectType: row.project_type || '',
+    projectProgress: row.project_progress || '',
     skills: normalizeSkills(skills),
     visibility: row.visibility,
     featured: Boolean(row.featured),
@@ -108,6 +125,8 @@ async function readSeedPortfolioCollection(profileSlug) {
       summary: item.summary || '',
       description: item.description || '',
       category: item.category || '',
+      projectType: normalizeProjectType(item.projectType || item.category || ''),
+      projectProgress: normalizeProjectProgress(item.projectProgress),
       skills: normalizeSkills(item.skills),
       visibility: normalizeVisibility(item.visibility || 'public'),
       featured: Boolean(item.featured),
@@ -208,6 +227,8 @@ function validatePortfolioCreateInput(input = {}) {
     summary: String(input.summary || '').trim(),
     description: String(input.description || '').trim(),
     category: String(input.category || '').trim(),
+    projectType: normalizeProjectType(input.projectType || input.category),
+    projectProgress: normalizeProjectProgress(input.projectProgress),
     skills: normalizeSkills(input.skills),
     visibility: normalizeVisibility(input.visibility || 'private'),
     featured: Boolean(input.featured),
@@ -223,6 +244,12 @@ function applyPortfolioPatch(existing, input = {}) {
     summary: input.summary !== undefined ? String(input.summary || '').trim() : existing.summary,
     description: input.description !== undefined ? String(input.description || '').trim() : existing.description,
     category: input.category !== undefined ? String(input.category || '').trim() : existing.category,
+    projectType: input.projectType !== undefined
+      ? normalizeProjectType(input.projectType || input.category)
+      : (existing.projectType || ''),
+    projectProgress: input.projectProgress !== undefined
+      ? normalizeProjectProgress(input.projectProgress)
+      : (existing.projectProgress || ''),
     skills: input.skills !== undefined ? normalizeSkills(input.skills) : existing.skills,
     visibility: input.visibility !== undefined ? normalizeVisibility(input.visibility) : existing.visibility,
     featured: input.featured !== undefined ? Boolean(input.featured) : existing.featured,
@@ -287,10 +314,10 @@ export async function createPortfolioItem(profileSlug, input, actorUserId = null
     const [result] = await connection.query(
       `
         INSERT INTO portfolio_items (
-          profile_id, title, slug, summary, description, category, skills_json,
+          profile_id, title, slug, summary, description, category, project_type, project_progress, skills_json,
           visibility, featured, sort_order, created_by, updated_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         profile.id,
@@ -299,6 +326,8 @@ export async function createPortfolioItem(profileSlug, input, actorUserId = null
         values.summary,
         values.description,
         values.category,
+        values.projectType || null,
+        values.projectProgress || null,
         JSON.stringify(values.skills),
         values.visibility,
         values.featured ? 1 : 0,
@@ -383,7 +412,7 @@ export async function updatePortfolioItem(profileSlug, itemId, input, actorUserI
     await connection.query(
       `
         UPDATE portfolio_items
-        SET title = ?, slug = ?, summary = ?, description = ?, category = ?, skills_json = ?,
+        SET title = ?, slug = ?, summary = ?, description = ?, category = ?, project_type = ?, project_progress = ?, skills_json = ?,
             visibility = ?, featured = ?, sort_order = ?, updated_by = ?, updated_at = NOW()
         WHERE id = ?
       `,
@@ -393,6 +422,8 @@ export async function updatePortfolioItem(profileSlug, itemId, input, actorUserI
         values.summary,
         values.description,
         values.category,
+        values.projectType || null,
+        values.projectProgress || null,
         JSON.stringify(values.skills),
         values.visibility,
         values.featured ? 1 : 0,
