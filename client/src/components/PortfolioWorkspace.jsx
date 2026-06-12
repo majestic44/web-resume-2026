@@ -38,7 +38,7 @@ function emptyCreateForm() {
     category: '',
     projectType: '',
     projectProgress: '',
-    skillsText: '',
+    tagsText: '',
     visibility: 'public',
     featured: false,
     sortOrder: 0,
@@ -46,7 +46,7 @@ function emptyCreateForm() {
   };
 }
 
-function skillsToText(skills) {
+function tagsToText(skills) {
   return Array.isArray(skills) ? skills.join('\n') : '';
 }
 
@@ -74,7 +74,7 @@ function buildItemStates(items) {
       category: item.category || '',
       projectType: item.projectType || item.category || '',
       projectProgress: item.projectProgress || '',
-      skillsText: skillsToText(item.skills),
+      tagsText: tagsToText(item.skills),
       visibility: item.visibility || 'private',
       featured: Boolean(item.featured),
       sortOrder: item.sortOrder ?? 0,
@@ -105,7 +105,7 @@ function portfolioFormToPayload(form) {
     category: form.category || form.projectType,
     projectType: form.projectType,
     projectProgress: form.projectProgress,
-    skills: String(form.skillsText || '')
+    skills: String(form.tagsText || '')
       .split(/\r?\n|,/)
       .map(item => item.trim())
       .filter(Boolean),
@@ -179,7 +179,7 @@ function PortfolioAdvancedFields({ form, onPatch }) {
     <details className="portfolio-advanced-block">
       <summary>Advanced portfolio details</summary>
       <div className="portfolio-advanced-block__content">
-        <p className="field-help">Only use these when you need manual ordering, a custom slug, or project-specific skill tags.</p>
+        <p className="field-help">Only use these when you need manual ordering, a custom slug, or extra tag labels for filtering and presentation.</p>
         <div className="form-grid two">
           <TextField>
             <Label>Slug</Label>
@@ -192,9 +192,9 @@ function PortfolioAdvancedFields({ form, onPatch }) {
         </div>
 
         <TextField>
-          <Label>Skills</Label>
-          <TextArea rows={4} value={form.skillsText} onChange={event => onPatch({ skillsText: event.target.value })} />
-          <p className="field-help">Optional. Add only skills that help explain this specific project.</p>
+          <Label>Tags</Label>
+          <TextArea rows={3} value={form.tagsText} onChange={event => onPatch({ tagsText: event.target.value })} />
+          <p className="field-help">Optional. One tag per line or separated with commas, like `Website`, `React`, or `Automation`.</p>
         </TextField>
       </div>
     </details>
@@ -210,8 +210,22 @@ function PortfolioProjectCard({ item, state, onPatch, onAssetChange, onAssetAdd,
         <div className="portfolio-project-card__head">
           <div>
             <p className="card-label">{state.projectType || 'Project'}</p>
-            <h2>{item.title}</h2>
-            <p>{progressOptions.find(option => option.id === state.projectProgress)?.label || 'Progress not set'}</p>
+            <h2>{state.title || item.title}</h2>
+            <div className="portfolio-project-card__status-row">
+              {state.projectProgress ? (
+                <span className="portfolio-project-card__status-chip">
+                  {progressOptions.find(option => option.id === state.projectProgress)?.label || 'Progress not set'}
+                </span>
+              ) : null}
+              {state.tagsText
+                ? String(state.tagsText)
+                    .split(/\r?\n|,/)
+                    .map(tag => tag.trim())
+                    .filter(Boolean)
+                    .slice(0, 3)
+                    .map(tag => <span className="portfolio-project-card__tag-chip" key={tag}>{tag}</span>)
+                : null}
+            </div>
           </div>
           {leadImage ? (
             <img

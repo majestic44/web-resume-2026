@@ -30,6 +30,10 @@ function getProgressLabel(value) {
   })[value] || '';
 }
 
+function tagItems(skills) {
+  return Array.isArray(skills) ? skills.filter(Boolean) : [];
+}
+
 export function ProfilePublic({ pathname }) {
   const slug = useMemo(() => pathname.split('/')[2] || '', [pathname]);
   const [state, setState] = useState({ status: 'loading', payload: null });
@@ -127,6 +131,7 @@ export function ProfilePublic({ pathname }) {
               const imageAssets = (item.assets || []).filter(asset => asset.assetType === 'image' && getAssetHref(asset));
               const leadImage = imageAssets[0] || null;
               const supportingAssets = (item.assets || []).filter(asset => asset.assetType !== 'image' && getAssetHref(asset));
+              const tags = tagItems(item.skills);
 
               return (
                 <article className="portfolio-card" key={item.id || item.slug}>
@@ -154,8 +159,8 @@ export function ProfilePublic({ pathname }) {
                       <p className="card-label">{item.projectType || item.category || 'Portfolio Item'}</p>
                       <h3>{item.title}</h3>
                       <div className="portfolio-card__meta-row">
-                        {item.projectType ? <span>{item.projectType}</span> : null}
                         {item.projectProgress ? <span>{getProgressLabel(item.projectProgress)}</span> : null}
+                        {item.featured ? <span>Featured</span> : null}
                       </div>
                     </div>
                   </div>
@@ -163,9 +168,9 @@ export function ProfilePublic({ pathname }) {
                   {item.summary ? <p className="portfolio-card__summary">{item.summary}</p> : null}
                   {item.description ? <p className="portfolio-card__description">{item.description}</p> : null}
 
-                  {item.skills?.length ? (
-                    <div className="portfolio-card__skills">
-                      {item.skills.map(skill => <span key={skill}>{skill}</span>)}
+                  {tags.length ? (
+                    <div className="portfolio-card__tags">
+                      {tags.map(tag => <span key={tag}>{tag}</span>)}
                     </div>
                   ) : null}
 

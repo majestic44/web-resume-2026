@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 Branch: `feature/multi-user-resume-app`
 
 ## Summary
@@ -30,6 +30,7 @@ Admin/app routes:
 - `/login`
 - `/dashboard`
 - `/editor`
+- `/portfolio` legacy portfolio page
 - `/profiles`
 - `/members`
 - `/templates`
@@ -43,12 +44,12 @@ Admin/app routes:
 - Public resume pages rendered by React templates
 - Public cover letter pages rendered by React templates
 - PDF export via browser print flow
-- Portfolio section scaffold on public profile pages
+- Portfolio gallery/cards on public profile pages
 
 ### Editing workflow
 
 - Resume and cover-letter draft editor with section-based editing
-- Portfolio manager page for portfolio item create/edit/delete in database mode
+- Portfolio manager integrated into the editor workflow for per-profile project management
 - Save draft
 - Reset draft to source
 - Publish saved draft to the live public document in database mode
@@ -60,6 +61,8 @@ Admin/app routes:
 - Profile creation and profile updates
 - Automatic creation of default resume and cover letter documents for new profiles
 - Portfolio schema and repository foundation
+- Portfolio project metadata support for project type and progress
+- Portfolio tag presentation support
 - Template selection per profile
 - Seed-mode profile/document loading
 - Database-mode profile/document loading
@@ -104,7 +107,9 @@ Portfolio seed scaffolding currently lives in:
 
 ## In Progress / Not Fully Surfaced Yet
 
-- Portfolio admin UI exists, but seed-mode portfolio editing is not implemented
+- Portfolio editing is database-only and not implemented for seed-mode content
+- Portfolio editor flow needs broader QA with live database content and migration `005_portfolio_project_meta.sql`
+- Media uploads/reusable assets are not yet available; portfolio still relies on URLs or file paths
 - Database schema includes `public_links`, `password_resets`, and `audit_logs`, but those are not fully exposed through the current UI flow yet
 - Document versioning exists in the schema and draft publish path, but there is not yet a fuller history-management UI
 
@@ -115,7 +120,7 @@ Portfolio seed scaffolding currently lives in:
 - Dependencies were installed successfully with `npm.cmd install`
 - Production build now passes with `npm.cmd run build`
 - Cover-letter draft editing now uses the same save/reset/publish workflow as the resume editor
-- Portfolio phase 1 is now implemented with migration scaffolding, API routes, a public profile page, and a database-mode admin page
+- Portfolio is now managed from the editor, with public project cards, lead images, tags, project type, and progress support
 
 ## Recent Milestone Commits
 
@@ -128,7 +133,8 @@ Portfolio seed scaffolding currently lives in:
 
 ## Recommended Next Steps
 
-1. Install dependencies and run a clean local build.
-2. Verify end-to-end flows in both seed mode and database mode.
-3. Add seed-mode portfolio editing or decide to keep portfolio management database-only.
-4. Decide whether to expose public-link sharing, audit logs, and version history in the UI now or keep them staged for a later phase.
+1. Apply migration `005_portfolio_project_meta.sql` and verify portfolio create/edit flows in database mode.
+2. Populate real portfolio content and test public profile cards with live images, links, tags, and progress values.
+3. Build the media library/upload workflow so portfolio management does not depend on manual file paths or external URLs.
+4. Decide whether seed-mode portfolio editing is worth supporting or whether portfolio remains database-only.
+5. Choose the next CMS surface to expose after portfolio polish: version history, share-link management, or application tracking/private notes.
