@@ -1,10 +1,12 @@
 import express from 'express';
+import multer from 'multer';
 import { getDataSource } from '../config/app.js';
 import { getDatabasePool } from '../config/database.js';
 import { destroySession, requireDraftEditor, requireMemberManager, sessionCookieName } from '../middleware/auth.js';
 import { createMemberAccount, listMembers, updateMemberAccount } from '../repositories/adminRepository.js';
 import { authenticateUser, createUserSession } from '../repositories/authRepository.js';
 import { listProfiles, readDocument } from '../repositories/documentRepository.js';
+import { createProfileMedia, listProfileMedia } from '../repositories/mediaRepository.js';
 import {
   createPortfolioItem,
   deletePortfolioItem,
@@ -18,18 +20,24 @@ import { createProfile, listManagedProfiles, updateProfile } from '../repositori
 import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 8 * 1024 * 1024
+  }
+});
 
-function isMissingPortfolioSchemaError(error) {
+function isMissingSchemaError(error) {
   return ['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code);
 }
 
-function respondIfPortfolioSchemaMissing(error, res) {
-  if (!isMissingPortfolioSchemaError(error)) {
+function respondIfMissingSchema(error, res, message) {
+  if (!isMissingSchemaError(error)) {
     return false;
   }
 
   res.status(503).json({
-    error: 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.'
+    error: message
   });
   return true;
 }
@@ -167,7 +175,7 @@ apiRouter.get('/profiles/:slug/public', async (req, res, next) => {
 
     res.json(profile);
   } catch (error) {
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -179,7 +187,7 @@ apiRouter.get('/profiles/:slug/portfolio', async (req, res, next) => {
   try {
     res.json({ items: await listPublicPortfolio(req.params.slug) });
   } catch (error) {
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -397,7 +405,7 @@ apiRouter.get('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req,
   try {
     res.json({ items: await listManagedPortfolio(req.params.slug) });
   } catch (error) {
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -426,7 +434,7 @@ apiRouter.post('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req
       return;
     }
 
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -455,7 +463,7 @@ apiRouter.patch('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, a
       return;
     }
 
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -484,7 +492,7 @@ apiRouter.delete('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, 
 
     res.status(204).end();
   } catch (error) {
-    if (respondIfPortfolioSchemaMissing(error, res)) {
+    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
       return;
     }
 
@@ -497,10 +505,65 @@ apiRouter.delete('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, 
   }
 });
 
+apiRouter.get('/admin/profiles/:slug/media', requireDraftEditor, async (req, res, next) => {
+  try {
+    res.json({ items: await listProfileMedia(req.params.slug) });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Media library tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest media-library migration.')) {
+      return;
+    }
+
+    if (error.message === 'Media library management requires DATA_SOURCE=database.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:slug/media', requireDraftEditor, upload.single('file'), async (req, res, next) => {
+  try {
+    const item = await createProfileMedia(req.params.slug, req.file, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Media library tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest media-library migration.')) {
+      return;
+    }
+
+    if ([
+      'Media library management requires DATA_SOURCE=database.',
+      'A file upload is required.',
+      'Only image and PDF uploads are supported right now.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
 registerDraftRoutes('resume');
 registerDraftRoutes('cover-letter');
 
 apiRouter.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ error: 'Upload files must be 8MB or smaller.' });
+      return;
+    }
+
+    res.status(400).json({ error: error.message || 'Upload failed.' });
+    return;
+  }
+
   console.error(error);
   res.status(500).json({ error: 'Unexpected server error' });
 });

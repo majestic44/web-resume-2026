@@ -1,6 +1,6 @@
 import { Button, Card, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { BriefcaseBusiness, Eye, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { BriefcaseBusiness, Copy, Eye, ExternalLink, FileImage, FileText, ImagePlus, Plus, Save, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const progressOptions = [
   { id: '', label: 'Not set' },
@@ -62,6 +62,19 @@ function getAssetSourceHint(assetType) {
   if (assetType === 'image') return 'The first image becomes the project card image on the public profile.';
   if (assetType === 'pdf') return 'Use a public PDF URL or file path visitors can open.';
   return 'Use a public link for GitHub, demos, references, or supporting material.';
+}
+
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function mediaLabel(mediaItem) {
+  return String(mediaItem?.originalName || '')
+    .replace(/\.[^.]+$/, '')
+    .trim();
 }
 
 function buildItemStates(items) {
@@ -326,13 +339,57 @@ function PortfolioProjectCard({ item, state, onPatch, onAssetChange, onAssetAdd,
   );
 }
 
+function MediaLibraryCard({ item, onUse, onCopy }) {
+  return (
+    <div className="media-library-card">
+      <div className="media-library-card__preview">
+        {item.kind === 'image' ? (
+          <img src={item.publicPath} alt={item.originalName} loading="lazy" />
+        ) : item.kind === 'pdf' ? (
+          <div className="media-library-card__placeholder">
+            <FileText size={22} />
+            <span>PDF</span>
+          </div>
+        ) : (
+          <div className="media-library-card__placeholder">
+            <FileImage size={22} />
+            <span>File</span>
+          </div>
+        )}
+      </div>
+      <div className="media-library-card__body">
+        <p className="card-label">{item.kind}</p>
+        <h3>{mediaLabel(item)}</h3>
+        <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
+        <div className="media-library-card__actions">
+          <button type="button" onClick={() => onUse(item)}>
+            <ImagePlus size={15} />
+            <span>Use in Project</span>
+          </button>
+          <button type="button" onClick={() => onCopy(item.publicPath)}>
+            <Copy size={15} />
+            <span>Copy Path</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PortfolioWorkspace({ authState, profile }) {
   const [items, setItems] = useState([]);
   const [itemStates, setItemStates] = useState({});
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const [mediaItems, setMediaItems] = useState([]);
+  const [mediaStatus, setMediaStatus] = useState('loading');
+  const [mediaError, setMediaError] = useState('');
+  const [uploadState, setUploadState] = useState('idle');
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
+  const [copiedPath, setCopiedPath] = useState('');
   const [createForm, setCreateForm] = useState(emptyCreateForm());
   const [createState, setCreateState] = useState('idle');
+  const uploadInputRef = useRef(null);
 
   const canManage = authState.dataSource === 'database'
     && ['owner', 'admin', 'editor'].includes(authState.user?.role)
@@ -368,6 +425,34 @@ export function PortfolioWorkspace({ authState, profile }) {
       .catch(loadError => {
         setError(loadError.message);
         setStatus('error');
+      });
+  }, [canManage, profile?.slug]);
+
+  useEffect(() => {
+    if (!profile?.slug || !canManage) {
+      setMediaStatus('ready');
+      return;
+    }
+
+    setMediaStatus('loading');
+    setMediaError('');
+
+    fetch(`/api/admin/profiles/${profile.slug}/media`)
+      .then(async response => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || 'Unable to load media library.');
+        }
+
+        return response.json();
+      })
+      .then(payload => {
+        setMediaItems(payload.items || []);
+        setMediaStatus('ready');
+      })
+      .catch(loadError => {
+        setMediaError(loadError.message);
+        setMediaStatus('error');
       });
   }, [canManage, profile?.slug]);
 
@@ -439,6 +524,12 @@ export function PortfolioWorkspace({ authState, profile }) {
     const nextItems = payload.items || [];
     setItems(nextItems);
     setItemStates(buildItemStates(nextItems));
+  };
+
+  const reloadMediaItems = async () => {
+    const response = await fetch(`/api/admin/profiles/${profile.slug}/media`);
+    const payload = response.ok ? await response.json() : { items: [] };
+    setMediaItems(payload.items || []);
   };
 
   const handleCreate = async () => {
@@ -521,6 +612,73 @@ export function PortfolioWorkspace({ authState, profile }) {
     } catch (deleteError) {
       updateItemState(item.id, { deleting: false, error: deleteError.message });
     }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedUploadFile || !profile?.slug) return;
+
+    setUploadState('uploading');
+    setMediaError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedUploadFile);
+
+      const response = await fetch(`/api/admin/profiles/${profile.slug}/media`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to upload file.');
+      }
+
+      setMediaItems(current => [payload.item, ...current]);
+      setSelectedUploadFile(null);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = '';
+      }
+      setUploadState('uploaded');
+    } catch (uploadError) {
+      setMediaError(uploadError.message);
+      setUploadState('error');
+    }
+  };
+
+  const copyMediaPath = async publicPath => {
+    try {
+      await navigator.clipboard.writeText(publicPath);
+      setCopiedPath(publicPath);
+      window.setTimeout(() => setCopiedPath(''), 1800);
+    } catch {
+      setCopiedPath('');
+    }
+  };
+
+  const useMediaInCreateForm = mediaItem => {
+    const nextAsset = {
+      assetType: mediaItem.kind === 'pdf' ? 'pdf' : 'image',
+      label: mediaLabel(mediaItem),
+      filePath: mediaItem.publicPath,
+      externalUrl: '',
+      sortOrder: 0
+    };
+
+    setCreateForm(current => {
+      const openIndex = current.assets.findIndex(asset => !asset.filePath && !asset.externalUrl);
+      if (openIndex >= 0) {
+        return {
+          ...current,
+          assets: current.assets.map((asset, index) => (index === openIndex ? { ...asset, ...nextAsset, sortOrder: asset.sortOrder ?? index } : asset))
+        };
+      }
+
+      return {
+        ...current,
+        assets: [...current.assets, { ...nextAsset, sortOrder: current.assets.length }]
+      };
+    });
   };
 
   if (!canManage) {
@@ -664,6 +822,96 @@ export function PortfolioWorkspace({ authState, profile }) {
               <span>Open public profile</span>
               <ExternalLink size={14} />
             </a>
+          </Card.Content>
+        </Card>
+      </section>
+
+      <section className="members-layout">
+        <Card className="form-panel members-create-panel media-library-panel">
+          <Card.Content className="form-stack">
+            <div>
+              <p className="card-label">Media Library</p>
+              <h2>Upload reusable project assets</h2>
+              <p className="field-help">Upload images and PDFs once, then reuse them in portfolio projects without manually typing file paths.</p>
+            </div>
+
+            {mediaError ? <p className="editor-error">{mediaError}</p> : null}
+
+            <div className="form-grid two">
+              <label className="form-panel">
+                <span>Choose File</span>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={event => setSelectedUploadFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              <div className="media-library-panel__upload-meta">
+                <p>{selectedUploadFile ? selectedUploadFile.name : 'No file selected yet.'}</p>
+                <p className="field-help">Supported: images and PDFs up to 8MB.</p>
+              </div>
+            </div>
+
+            <div className="toolbar">
+              <Button type="button" onPress={handleUpload} isDisabled={!selectedUploadFile || uploadState === 'uploading'}>
+                <ImagePlus size={16} />
+                <span>{uploadState === 'uploading' ? 'Uploading...' : 'Upload to Library'}</span>
+              </Button>
+              {uploadState === 'uploaded' ? <p className="editor-success">File uploaded to the media library.</p> : null}
+            </div>
+
+            {mediaStatus === 'loading' ? (
+              <div className="loading-row">
+                <Spinner size="sm" />
+                <p>Loading media library...</p>
+              </div>
+            ) : null}
+
+            {mediaStatus === 'ready' && mediaItems.length === 0 ? (
+              <div className="media-library-empty">
+                <p>No uploaded assets yet. Upload an image or PDF to start building the library.</p>
+              </div>
+            ) : null}
+
+            {mediaItems.length ? (
+              <div className="media-library-grid">
+                {mediaItems.slice(0, 12).map(item => (
+                  <MediaLibraryCard
+                    key={item.id}
+                    item={item}
+                    onUse={useMediaInCreateForm}
+                    onCopy={copyMediaPath}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {copiedPath ? <p className="field-help">Copied path: {copiedPath}</p> : null}
+          </Card.Content>
+        </Card>
+
+        <Card className="members-summary-card">
+          <Card.Content className="form-stack">
+            <div>
+              <p className="card-label">Library Summary</p>
+              <h2>{mediaItems.length} asset{mediaItems.length === 1 ? '' : 's'}</h2>
+              <p className="field-help">Use uploaded files in portfolio cards now, with profile photos and broader reuse next.</p>
+            </div>
+            <dl className="snapshot-list compact">
+              <div>
+                <dt>Images</dt>
+                <dd>{mediaItems.filter(item => item.kind === 'image').length}</dd>
+              </div>
+              <div>
+                <dt>PDFs</dt>
+                <dd>{mediaItems.filter(item => item.kind === 'pdf').length}</dd>
+              </div>
+              <div>
+                <dt>Recent</dt>
+                <dd>{mediaItems[0] ? mediaLabel(mediaItems[0]) : 'None yet'}</dd>
+              </div>
+            </dl>
           </Card.Content>
         </Card>
       </section>
