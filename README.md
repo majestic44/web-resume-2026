@@ -36,9 +36,11 @@ http://localhost:5173
 Useful routes:
 
 - `/` - profile directory
+- `/profile/jareth`
 - `/login` - sign in
 - `/dashboard` - admin dashboard
 - `/editor` - resume draft editor
+- `/portfolio` - portfolio manager
 - `/profiles` - owner/admin profile management
 - `/members` - owner/admin access management
 - `/templates` - template registry
@@ -51,6 +53,8 @@ API routes run through Express on port `3000` during local development:
 
 - `/api/health`
 - `/api/profiles`
+- `/api/profiles/:slug/public`
+- `/api/profiles/:slug/portfolio`
 - `/api/documents/resume/jareth`
 - `/api/documents/cover-letter/jareth`
 - `/api/drafts/resume/:slug`
@@ -149,8 +153,33 @@ Owner/admin accounts can manage profiles from `/profiles`.
 New profiles show up in:
 
 - the public directory
+- the public profile route
 - the editor profile selector
 - the member access assignment screen
+
+## Portfolio Phase 1
+
+The first portfolio foundation is now in place.
+
+- Public profiles are available at `/profile/:slug`
+- Each public profile can show:
+  - profile photo
+  - headline
+  - summary
+  - resume link
+  - cover letter link
+  - public portfolio items
+- Portfolio seed files currently exist for:
+  - `server/data/seeds/jareth-portfolio.json`
+  - `server/data/seeds/angel-portfolio.json`
+- A portfolio admin page now exists at `/portfolio`
+- Admin CRUD API routes are available for database mode:
+  - `GET /api/admin/profiles/:slug/portfolio`
+  - `POST /api/admin/profiles/:slug/portfolio`
+  - `PATCH /api/admin/profiles/:slug/portfolio/:itemId`
+  - `DELETE /api/admin/profiles/:slug/portfolio/:itemId`
+
+Portfolio editing from `/portfolio` requires `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
 
 ## Member Access
 

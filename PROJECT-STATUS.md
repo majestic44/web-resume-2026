@@ -39,13 +39,16 @@ Admin/app routes:
 ### Public experience
 
 - Public profile directory rendered from API profile data
+- Public profile hub pages at `/profile/:slug`
 - Public resume pages rendered by React templates
 - Public cover letter pages rendered by React templates
 - PDF export via browser print flow
+- Portfolio section scaffold on public profile pages
 
 ### Editing workflow
 
 - Resume and cover-letter draft editor with section-based editing
+- Portfolio manager page for portfolio item create/edit/delete in database mode
 - Save draft
 - Reset draft to source
 - Publish saved draft to the live public document in database mode
@@ -56,6 +59,7 @@ Admin/app routes:
 
 - Profile creation and profile updates
 - Automatic creation of default resume and cover letter documents for new profiles
+- Portfolio schema and repository foundation
 - Template selection per profile
 - Seed-mode profile/document loading
 - Database-mode profile/document loading
@@ -93,8 +97,14 @@ Seed documents currently live in:
 - `server/data/seeds/angel-resume.json`
 - `server/data/seeds/angel-cover-letter.json`
 
+Portfolio seed scaffolding currently lives in:
+
+- `server/data/seeds/jareth-portfolio.json`
+- `server/data/seeds/angel-portfolio.json`
+
 ## In Progress / Not Fully Surfaced Yet
 
+- Portfolio admin UI exists, but seed-mode portfolio editing is not implemented
 - Database schema includes `public_links`, `password_resets`, and `audit_logs`, but those are not fully exposed through the current UI flow yet
 - Document versioning exists in the schema and draft publish path, but there is not yet a fuller history-management UI
 
@@ -105,6 +115,7 @@ Seed documents currently live in:
 - Dependencies were installed successfully with `npm.cmd install`
 - Production build now passes with `npm.cmd run build`
 - Cover-letter draft editing now uses the same save/reset/publish workflow as the resume editor
+- Portfolio phase 1 is now implemented with migration scaffolding, API routes, a public profile page, and a database-mode admin page
 
 ## Recent Milestone Commits
 
@@ -119,4 +130,5 @@ Seed documents currently live in:
 
 1. Install dependencies and run a clean local build.
 2. Verify end-to-end flows in both seed mode and database mode.
-3. Decide whether to expose public-link sharing, audit logs, and version history in the UI now or keep them staged for a later phase.
+3. Add seed-mode portfolio editing or decide to keep portfolio management database-only.
+4. Decide whether to expose public-link sharing, audit logs, and version history in the UI now or keep them staged for a later phase.

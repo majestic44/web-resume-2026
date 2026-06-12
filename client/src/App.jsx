@@ -1,11 +1,13 @@
 import { Chip } from '@heroui/react';
-import { FilePenLine, FolderPlus, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
+import { BriefcaseBusiness, FilePenLine, FolderPlus, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { DocumentPage } from './pages/DocumentPage.jsx';
 import { Editor } from './pages/Editor.jsx';
 import { Login } from './pages/Login.jsx';
 import { Members } from './pages/Members.jsx';
+import { PortfolioAdmin } from './pages/PortfolioAdmin.jsx';
+import { ProfilePublic } from './pages/ProfilePublic.jsx';
 import { ProfilesAdmin } from './pages/ProfilesAdmin.jsx';
 import { PublicDirectory } from './pages/PublicDirectory.jsx';
 import { Templates } from './pages/Templates.jsx';
@@ -14,6 +16,7 @@ const routes = {
   '/dashboard': Dashboard,
   '/login': Login,
   '/editor': Editor,
+  '/portfolio': PortfolioAdmin,
   '/members': Members,
   '/profiles': ProfilesAdmin,
   '/templates': Templates
@@ -22,6 +25,7 @@ const routes = {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/editor', label: 'Editor', icon: FilePenLine },
+  { href: '/portfolio', label: 'Portfolio', icon: BriefcaseBusiness },
   { href: '/profiles', label: 'Profiles', icon: FolderPlus },
   { href: '/members', label: 'Members', icon: Users },
   { href: '/templates', label: 'Templates', icon: Shapes },
@@ -49,6 +53,10 @@ export function App() {
 
   if (pathname === '/') {
     return <PublicDirectory />;
+  }
+
+  if (pathname.startsWith('/profile/')) {
+    return <ProfilePublic pathname={pathname} />;
   }
 
   if (pathname.startsWith('/resume/') || pathname.startsWith('/cover-letter/')) {

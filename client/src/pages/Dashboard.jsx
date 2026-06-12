@@ -1,5 +1,5 @@
 import { Alert, Link, Spinner } from '@heroui/react';
-import { Eye, FilePenLine, FolderPlus, Users } from 'lucide-react';
+import { BriefcaseBusiness, Eye, FilePenLine, FolderPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ProfileCard } from '../components/ProfileCard.jsx';
@@ -37,6 +37,12 @@ export function Dashboard({ authState }) {
           <FilePenLine size={16} />
           <span>Open Editor</span>
         </Link>
+        {authState.dataSource === 'database' && authState.user ? (
+          <Link className="hero-link-button" href="/portfolio">
+            <BriefcaseBusiness size={16} />
+            <span>Manage Portfolio</span>
+          </Link>
+        ) : null}
         {authState.dataSource === 'database' && ['owner', 'admin'].includes(authState.user?.role) ? (
           <Link className="hero-link-button" href="/profiles">
             <FolderPlus size={16} />

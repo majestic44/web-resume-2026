@@ -5,6 +5,7 @@ export const profiles = {
     label: 'Operations & Logistics',
     template: 'modern',
     seedFile: 'jareth-resume.json',
+    profileLink: '/profile/jareth',
     resumeLink: '/resume/jareth',
     coverLetterLink: '/cover-letter/jareth'
   },
@@ -14,6 +15,7 @@ export const profiles = {
     label: 'Professional Profile',
     template: 'classic',
     seedFile: 'angel-resume.json',
+    profileLink: '/profile/angel',
     resumeLink: '/resume/angel',
     coverLetterLink: '/cover-letter/angel'
   }
@@ -45,3 +47,14 @@ export function publicDocumentMeta(meta) {
 
   return publicMeta;
 }
+
+export const portfolioCollections = {
+  jareth: {
+    slug: 'jareth',
+    seedFile: 'jareth-portfolio.json'
+  },
+  angel: {
+    slug: 'angel',
+    seedFile: 'angel-portfolio.json'
+  }
+};

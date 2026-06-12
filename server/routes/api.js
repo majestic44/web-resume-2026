@@ -5,6 +5,14 @@ import { destroySession, requireDraftEditor, requireMemberManager, sessionCookie
 import { createMemberAccount, listMembers, updateMemberAccount } from '../repositories/adminRepository.js';
 import { authenticateUser, createUserSession } from '../repositories/authRepository.js';
 import { listProfiles, readDocument } from '../repositories/documentRepository.js';
+import {
+  createPortfolioItem,
+  deletePortfolioItem,
+  listManagedPortfolio,
+  listPublicPortfolio,
+  readPublicProfile,
+  updatePortfolioItem
+} from '../repositories/portfolioRepository.js';
 import { deleteDraftBundle, publishDraftBundle, readDraftBundle, saveDraftBundle } from '../repositories/draftRepository.js';
 import { createProfile, listManagedProfiles, updateProfile } from '../repositories/profileRepository.js';
 import { serializeCookie } from '../services/cookieStore.js';
@@ -128,6 +136,29 @@ apiRouter.get('/health', async (req, res) => {
 apiRouter.get('/profiles', async (req, res, next) => {
   try {
     res.json({ profiles: await listProfiles() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.get('/profiles/:slug/public', async (req, res, next) => {
+  try {
+    const profile = await readPublicProfile(req.params.slug);
+
+    if (!profile) {
+      res.status(404).json({ error: 'Profile not found' });
+      return;
+    }
+
+    res.json(profile);
+  } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.get('/profiles/:slug/portfolio', async (req, res, next) => {
+  try {
+    res.json({ items: await listPublicPortfolio(req.params.slug) });
   } catch (error) {
     next(error);
   }
@@ -335,6 +366,94 @@ apiRouter.get('/documents/:type/:slug', async (req, res, next) => {
 
     res.json(document);
   } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req, res, next) => {
+  try {
+    res.json({ items: await listManagedPortfolio(req.params.slug) });
+  } catch (error) {
+    if (error.message === 'Portfolio item management requires DATA_SOURCE=database.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await createPortfolioItem(req.params.slug, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({ item });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ error: 'That portfolio slug is already in use for this profile.' });
+      return;
+    }
+
+    if (['Portfolio item management requires DATA_SOURCE=database.', 'Portfolio title is required.', 'Portfolio slug is required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.patch('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await updatePortfolioItem(req.params.slug, req.params.itemId, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Portfolio item not found.' });
+      return;
+    }
+
+    res.json({ item });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ error: 'That portfolio slug is already in use for this profile.' });
+      return;
+    }
+
+    if ([
+      'Portfolio item management requires DATA_SOURCE=database.',
+      'Portfolio title is required.',
+      'Portfolio slug is required.',
+      'A valid portfolio item id is required.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const deleted = await deletePortfolioItem(req.params.slug, req.params.itemId);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Portfolio item not found.' });
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (['Portfolio item management requires DATA_SOURCE=database.', 'A valid portfolio item id is required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
     next(error);
   }
 });

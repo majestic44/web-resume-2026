@@ -13,6 +13,7 @@ function documentTypeForApi(type) {
 
 function profileLinks(slug) {
   return {
+    profileLink: `/profile/${slug}`,
     resumeLink: `/resume/${slug}`,
     coverLetterLink: `/cover-letter/${slug}`
   };
@@ -20,13 +21,21 @@ function profileLinks(slug) {
 
 export async function listProfiles() {
   if (!isDatabaseEnabled()) {
-    return listSeedProfiles();
+    const seedProfiles = listSeedProfiles();
+    const documents = await Promise.all(
+      seedProfiles.map(profile => readSeedDocument('resume', profile.slug))
+    );
+
+    return seedProfiles.map((profile, index) => ({
+      ...profile,
+      image: documents[index]?.content?.image || documents[index]?.content?.images?.profile || ''
+    }));
   }
 
   const pool = getDatabasePool();
   const [rows] = await pool.query(
     `
-      SELECT p.slug, p.display_name, p.headline, d.template
+      SELECT p.slug, p.display_name, p.headline, d.template, d.content_json
       FROM profiles p
       LEFT JOIN documents d
         ON d.profile_id = p.id
@@ -37,13 +46,17 @@ export async function listProfiles() {
     `
   );
 
-  return rows.map(row => ({
-    slug: row.slug,
-    name: row.display_name,
-    label: row.headline || 'Professional Profile',
-    template: row.template || 'modern',
-    ...profileLinks(row.slug)
-  }));
+  return rows.map(row => {
+    const content = typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json;
+
+    return {
+      slug: row.slug,
+      name: row.display_name,
+      label: row.headline || 'Professional Profile',
+      image: content?.image || content?.images?.profile || '',
+      ...profileLinks(row.slug)
+    };
+  });
 }
 
 export async function readDocument(type, profileSlug) {
