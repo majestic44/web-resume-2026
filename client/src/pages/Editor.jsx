@@ -2,23 +2,37 @@ import { Button, Card, Chip, Input, Label, TextArea, TextField } from '@heroui/r
 import { Eye, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
+import { addBodyParagraph, coverLetterDraftToJson, createCoverLetterDraft, removeArrayItem as removeCoverLetterArrayItem } from '../lib/coverLetterDraft.js';
 import {
   addExperienceItem,
   addSkillGroup,
   createResumeDraft,
-  removeArrayItem,
+  removeArrayItem as removeResumeArrayItem,
   resumeDraftToJson
 } from '../lib/resumeDraft.js';
 import { templateOptions } from '../templates/registry.js';
 
-const editorSections = [
-  { id: 'basics', label: 'Basics' },
-  { id: 'summary', label: 'Summary' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'experience', label: 'Experience' },
-  { id: 'education', label: 'Education' },
-  { id: 'json', label: 'JSON Preview' }
+const documentTypeOptions = [
+  { id: 'resume', label: 'Resume' },
+  { id: 'cover-letter', label: 'Cover Letter' }
 ];
+
+const editorSections = {
+  resume: [
+    { id: 'basics', label: 'Basics' },
+    { id: 'summary', label: 'Summary' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'experience', label: 'Experience' },
+    { id: 'education', label: 'Education' },
+    { id: 'json', label: 'JSON Preview' }
+  ],
+  'cover-letter': [
+    { id: 'basics', label: 'Basics' },
+    { id: 'recipient', label: 'Recipient' },
+    { id: 'content', label: 'Content' },
+    { id: 'json', label: 'JSON Preview' }
+  ]
+};
 
 function updateNestedValue(source, path, value) {
   const [group, key] = path;
@@ -36,9 +50,46 @@ function updateArrayItem(items, index, patch) {
   return items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item));
 }
 
+function createDraftForType(type, data = {}) {
+  return type === 'cover-letter' ? createCoverLetterDraft(data) : createResumeDraft(data);
+}
+
+function draftToJsonForType(type, draft) {
+  return type === 'cover-letter' ? coverLetterDraftToJson(draft) : resumeDraftToJson(draft);
+}
+
+function documentPreviewPath(type, slug) {
+  return type === 'cover-letter' ? `/cover-letter/${slug}` : `/resume/${slug}`;
+}
+
+function documentTypeTitle(type) {
+  return type === 'cover-letter' ? 'cover letter' : 'resume';
+}
+
+function documentTypeHeadline(type) {
+  return type === 'cover-letter' ? 'Cover letter editor' : 'Resume editor';
+}
+
+function documentCountSummary(type, json) {
+  if (type === 'cover-letter') {
+    return [
+      { label: 'Paragraphs', value: json?.body?.length || 0 },
+      { label: 'Recipient Lines', value: json?.recipient?.addressLines?.length || 0 },
+      { label: 'Template', value: json?.template || 'modern' }
+    ];
+  }
+
+  return [
+    { label: 'Skills', value: json?.skills?.reduce((total, group) => total + group.keywords.length, 0) || 0 },
+    { label: 'Experience', value: json?.experience?.length || 0 },
+    { label: 'Education', value: json?.education?.length || 0 }
+  ];
+}
+
 export function Editor({ authState }) {
   const [profiles, setProfiles] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState('jareth');
+  const [selectedDocumentType, setSelectedDocumentType] = useState('resume');
   const [activeSection, setActiveSection] = useState('basics');
   const [sourceDocument, setSourceDocument] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -65,18 +116,25 @@ export function Editor({ authState }) {
   }, []);
 
   useEffect(() => {
+    const sections = editorSections[selectedDocumentType] || editorSections.resume;
+    if (!sections.some(section => section.id === activeSection)) {
+      setActiveSection(sections[0].id);
+    }
+  }, [selectedDocumentType, activeSection]);
+
+  useEffect(() => {
     if (!selectedSlug) return;
 
     setStatus('loading');
     setError('');
 
-    fetch(`/api/documents/resume/${selectedSlug}`)
+    fetch(`/api/documents/${selectedDocumentType}/${selectedSlug}`)
       .then(response => {
-        if (!response.ok) throw new Error('Unable to load resume document.');
+        if (!response.ok) throw new Error(`Unable to load ${documentTypeTitle(selectedDocumentType)} document.`);
         return response.json();
       })
       .then(async document => {
-        const draftResponse = await fetch(`/api/drafts/resume/${selectedSlug}`);
+        const draftResponse = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}`);
         const draftPayload = draftResponse.ok ? await draftResponse.json() : { draft: null, history: [] };
         const sourceContent = {
           ...document.content,
@@ -88,11 +146,15 @@ export function Editor({ authState }) {
         };
 
         setSourceDocument({ ...document, content: sourceContent });
-        setDraft(createResumeDraft(startingContent));
+        setDraft(createDraftForType(selectedDocumentType, startingContent));
         setHistory(draftPayload.history || []);
         setSavedJsonText(JSON.stringify(startingContent, null, 2));
         setHasSavedDraft(Boolean(draftPayload.draft));
-        setStatusMessage(draftPayload.draft ? `Loaded saved draft from ${formatTimestamp(draftPayload.draft.savedAt)}` : 'Loaded source resume');
+        setStatusMessage(
+          draftPayload.draft
+            ? `Loaded saved draft from ${formatTimestamp(draftPayload.draft.savedAt)}`
+            : `Loaded source ${documentTypeTitle(selectedDocumentType)}`
+        );
         setSaveState('idle');
         setPublishState('idle');
         setStatus('ready');
@@ -101,9 +163,12 @@ export function Editor({ authState }) {
         setError(fetchError.message);
         setStatus('error');
       });
-  }, [selectedSlug]);
+  }, [selectedSlug, selectedDocumentType]);
 
-  const generatedJson = useMemo(() => (draft ? resumeDraftToJson(draft) : null), [draft]);
+  const generatedJson = useMemo(
+    () => (draft ? draftToJsonForType(selectedDocumentType, draft) : null),
+    [draft, selectedDocumentType]
+  );
   const generatedJsonText = useMemo(() => JSON.stringify(generatedJson || {}, null, 2), [generatedJson]);
 
   const editableProfiles = useMemo(() => {
@@ -133,6 +198,8 @@ export function Editor({ authState }) {
     && hasSavedDraft
     && canEditSelectedProfile
     && Boolean(authState.user);
+  const sections = editorSections[selectedDocumentType] || editorSections.resume;
+  const summaryItems = documentCountSummary(selectedDocumentType, generatedJson);
 
   const updateDraft = updater => {
     setDraft(current => (typeof updater === 'function' ? updater(current) : updater));
@@ -149,18 +216,18 @@ export function Editor({ authState }) {
     setError('');
 
     try {
-      const response = await fetch(`/api/drafts/resume/${selectedSlug}`, { method: 'DELETE' });
+      const response = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}`, { method: 'DELETE' });
       if (!response.ok && response.status !== 204) {
         throw new Error('Unable to reset saved draft.');
       }
 
-      setDraft(createResumeDraft(sourceDocument.content));
+      setDraft(createDraftForType(selectedDocumentType, sourceDocument.content));
       setSavedJsonText(JSON.stringify(sourceDocument.content, null, 2));
       setHasSavedDraft(false);
-      setStatusMessage('Draft reset to source resume');
+      setStatusMessage(`Draft reset to source ${documentTypeTitle(selectedDocumentType)}`);
       setSaveState('idle');
 
-      const draftResponse = await fetch(`/api/drafts/resume/${selectedSlug}`);
+      const draftResponse = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}`);
       const draftPayload = draftResponse.ok ? await draftResponse.json() : { history: [] };
       setHistory(draftPayload.history || []);
     } catch (resetError) {
@@ -179,7 +246,7 @@ export function Editor({ authState }) {
     setError('');
 
     try {
-      const response = await fetch(`/api/drafts/resume/${selectedSlug}`, {
+      const response = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: generatedJson })
@@ -216,7 +283,7 @@ export function Editor({ authState }) {
         await saveDraft({ silent: true });
       }
 
-      const response = await fetch(`/api/drafts/resume/${selectedSlug}/publish`, {
+      const response = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}/publish`, {
         method: 'POST'
       });
 
@@ -231,11 +298,11 @@ export function Editor({ authState }) {
       };
 
       setSourceDocument({ ...payload.document, content: liveContent });
-      setDraft(createResumeDraft(liveContent));
+      setDraft(createDraftForType(selectedDocumentType, liveContent));
       setSavedJsonText(JSON.stringify(liveContent, null, 2));
       setHistory(payload.history || []);
       setHasSavedDraft(false);
-      setStatusMessage(`Published to live resume at ${formatTimestamp(payload.document.meta?.updatedAt || payload.publishedAt)}`);
+      setStatusMessage(`Published live ${documentTypeTitle(selectedDocumentType)} at ${formatTimestamp(payload.document.meta?.updatedAt || payload.publishedAt)}`);
       setSaveState('idle');
       setPublishState('published');
     } catch (publishError) {
@@ -246,13 +313,13 @@ export function Editor({ authState }) {
 
   return (
     <>
-      <PageHeader eyebrow="Editor Draft" title="Resume editor">
+      <PageHeader eyebrow="Editor Draft" title={documentTypeHeadline(selectedDocumentType)}>
         <p>
           {authState.dataSource === 'database'
             ? authState.user
-              ? 'Edits save to protected draft history for the signed-in account.'
+              ? `Edits save to protected draft history for the signed-in account before you publish the live ${documentTypeTitle(selectedDocumentType)}.`
               : 'Database mode requires sign-in before draft changes can be saved.'
-            : 'Edits save to local server draft files in seed mode so we can keep moving before full account setup.'}
+            : `Edits save to local server draft files in seed mode so we can keep moving before full account setup.`}
         </p>
       </PageHeader>
 
@@ -262,6 +329,12 @@ export function Editor({ authState }) {
             <span>Profile</span>
             <select value={selectedSlug} onChange={event => setSelectedSlug(event.target.value)}>
               {editableProfiles.map(profile => <option key={profile.slug} value={profile.slug}>{profile.name}</option>)}
+            </select>
+          </label>
+          <label className="select-field">
+            <span>Document</span>
+            <select value={selectedDocumentType} onChange={event => setSelectedDocumentType(event.target.value)}>
+              {documentTypeOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
             </select>
           </label>
           <label className="select-field">
@@ -283,7 +356,7 @@ export function Editor({ authState }) {
       </section>
 
       {error ? <p className="editor-error">{error}</p> : null}
-      {publishState === 'published' ? <p className="editor-success">Live resume updated from the latest draft.</p> : null}
+      {publishState === 'published' ? <p className="editor-success">Live {documentTypeTitle(selectedDocumentType)} updated from the latest draft.</p> : null}
       {authState.dataSource === 'database' && authState.user && !editableProfiles.length ? (
         <p className="editor-error">This account does not have any assigned editable profiles yet.</p>
       ) : null}
@@ -291,7 +364,7 @@ export function Editor({ authState }) {
       <section className="editor-layout wide">
         <Card>
           <Card.Content className="section-list" aria-label="Editor sections">
-            {editorSections.map(section => (
+            {sections.map(section => (
               <button
                 className={activeSection === section.id ? 'active' : ''}
                 key={section.id}
@@ -307,17 +380,37 @@ export function Editor({ authState }) {
         <Card className="form-panel editor-panel">
           <Card.Content className="form-stack">
             {status === 'loading' || !draft ? (
-              <p className="muted">Loading resume draft...</p>
+              <p className="muted">Loading {documentTypeTitle(selectedDocumentType)} draft...</p>
             ) : (
               <>
                 {activeSection === 'basics' ? <BasicsSection draft={draft} updateBasics={updateBasics} /> : null}
-                {activeSection === 'summary' ? (
+                {selectedDocumentType === 'resume' && activeSection === 'summary' ? (
                   <SummarySection draft={draft} updateDraft={updateDraft} updateSectionTitle={updateSectionTitle} />
                 ) : null}
-                {activeSection === 'skills' ? <SkillsSection draft={draft} updateDraft={updateDraft} /> : null}
-                {activeSection === 'experience' ? <ExperienceSection draft={draft} updateDraft={updateDraft} /> : null}
-                {activeSection === 'education' ? <EducationSection draft={draft} updateDraft={updateDraft} /> : null}
-                {activeSection === 'json' ? <JsonPreview generatedJsonText={generatedJsonText} /> : null}
+                {selectedDocumentType === 'resume' && activeSection === 'skills' ? (
+                  <SkillsSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {selectedDocumentType === 'resume' && activeSection === 'experience' ? (
+                  <ExperienceSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {selectedDocumentType === 'resume' && activeSection === 'education' ? (
+                  <EducationSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {selectedDocumentType === 'cover-letter' && activeSection === 'recipient' ? (
+                  <RecipientSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {selectedDocumentType === 'cover-letter' && activeSection === 'content' ? (
+                  <CoverLetterContentSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {activeSection === 'json' ? (
+                  <JsonPreview
+                    generatedJsonText={generatedJsonText}
+                    title={selectedDocumentType === 'cover-letter' ? 'Generated Cover Letter JSON' : 'Generated Resume JSON'}
+                    description={selectedDocumentType === 'cover-letter'
+                      ? 'This is the cover letter payload that will be saved and published.'
+                      : 'This is the resume payload that will be saved and published.'}
+                  />
+                ) : null}
               </>
             )}
           </Card.Content>
@@ -327,22 +420,16 @@ export function Editor({ authState }) {
           <Card.Content className="form-stack">
             <div>
               <p className="card-label">Draft Snapshot</p>
-              <h2>{generatedJson?.name || 'Resume Draft'}</h2>
+              <h2>{generatedJson?.name || `${documentTypeOptions.find(option => option.id === selectedDocumentType)?.label || 'Document'} Draft`}</h2>
               <p>{generatedJson?.title || 'No headline yet'}</p>
             </div>
             <dl className="snapshot-list">
-              <div>
-                <dt>Skills</dt>
-                <dd>{generatedJson?.skills?.reduce((total, group) => total + group.keywords.length, 0) || 0}</dd>
-              </div>
-              <div>
-                <dt>Experience</dt>
-                <dd>{generatedJson?.experience?.length || 0}</dd>
-              </div>
-              <div>
-                <dt>Education</dt>
-                <dd>{generatedJson?.education?.length || 0}</dd>
-              </div>
+              {summaryItems.map(item => (
+                <div key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
             </dl>
             <div className="history-block">
               <p className="card-label">Recent Saves</p>
@@ -370,7 +457,7 @@ export function Editor({ authState }) {
                 onPress={publishDraft}
               >
                 <Send size={16} />
-                <span>{publishState === 'publishing' ? 'Publishing...' : 'Publish to Resume'}</span>
+                <span>{publishState === 'publishing' ? 'Publishing...' : 'Publish Live'}</span>
               </Button>
               <Button
                 type="button"
@@ -381,7 +468,7 @@ export function Editor({ authState }) {
                 <RotateCcw size={16} />
                 <span>Reset</span>
               </Button>
-              <a className="hero-link-button" href={`/resume/${selectedSlug}`}>
+              <a className="hero-link-button" href={documentPreviewPath(selectedDocumentType, selectedSlug)}>
                 <Eye size={16} />
                 <span>Public Preview</span>
               </a>
@@ -396,7 +483,7 @@ export function Editor({ authState }) {
 function BasicsSection({ draft, updateBasics }) {
   return (
     <>
-      <EditorSectionHeading title="Basics" description="Primary identity and contact fields for the resume header." />
+      <EditorSectionHeading title="Basics" description="Primary identity and contact fields for the document header." />
       <p className="field-help">Selected template: {templateOptions.find(template => template.id === draft.template)?.name || 'Modern'}</p>
       <div className="form-grid two">
         <DraftInput label="Display Name" value={draft.basics.name} onChange={value => updateBasics('name', value)} />
@@ -450,7 +537,7 @@ function SkillsSection({ draft, updateDraft }) {
         <div className="nested-card" key={`${group.name}-${index}`}>
           <div className="nested-card-header">
             <h3>Skill Group {index + 1}</h3>
-            <button type="button" onClick={() => updateDraft(current => ({ ...current, skills: removeArrayItem(current.skills, index) }))}>
+            <button type="button" onClick={() => updateDraft(current => ({ ...current, skills: removeResumeArrayItem(current.skills, index) }))}>
               <Trash2 size={16} />
               <span>Remove</span>
             </button>
@@ -496,7 +583,7 @@ function ExperienceSection({ draft, updateDraft }) {
         <div className="nested-card" key={`${item.company}-${item.role}-${index}`}>
           <div className="nested-card-header">
             <h3>Experience {index + 1}</h3>
-            <button type="button" onClick={() => updateDraft(current => ({ ...current, experience: removeArrayItem(current.experience, index) }))}>
+            <button type="button" onClick={() => updateDraft(current => ({ ...current, experience: removeResumeArrayItem(current.experience, index) }))}>
               <Trash2 size={16} />
               <span>Remove</span>
             </button>
@@ -538,7 +625,7 @@ function EducationSection({ draft, updateDraft }) {
         <div className="nested-card" key={`${item.school}-${item.credential}-${index}`}>
           <div className="nested-card-header">
             <h3>Education {index + 1}</h3>
-            <button type="button" onClick={() => updateDraft(current => ({ ...current, education: removeArrayItem(current.education, index) }))}>
+            <button type="button" onClick={() => updateDraft(current => ({ ...current, education: removeResumeArrayItem(current.education, index) }))}>
               <Trash2 size={16} />
               <span>Remove</span>
             </button>
@@ -562,10 +649,88 @@ function EducationSection({ draft, updateDraft }) {
   );
 }
 
-function JsonPreview({ generatedJsonText }) {
+function RecipientSection({ draft, updateDraft }) {
   return (
     <>
-      <EditorSectionHeading title="Generated JSON" description="This is the shape that will be saved to MariaDB once authenticated saving is enabled." />
+      <EditorSectionHeading title="Recipient" description="Target the company and add recipient address details for the cover letter." />
+      <div className="form-grid two">
+        <DraftInput
+          label="Recipient Name"
+          value={draft.recipient.name}
+          onChange={value => updateDraft(current => updateNestedValue(current, ['recipient', 'name'], value))}
+        />
+        <DraftInput
+          label="Recipient Company"
+          value={draft.recipient.company}
+          onChange={value => updateDraft(current => updateNestedValue(current, ['recipient', 'company'], value))}
+        />
+      </div>
+      <DraftTextArea
+        label="Recipient Address Lines"
+        rows={4}
+        value={draft.recipient.addressLinesText}
+        onChange={value => updateDraft(current => updateNestedValue(current, ['recipient', 'addressLinesText'], value))}
+        help="One address line per line."
+      />
+    </>
+  );
+}
+
+function CoverLetterContentSection({ draft, updateDraft }) {
+  return (
+    <>
+      <EditorSectionHeading title="Content" description="Edit the salutation, opening, body paragraphs, closing, and signoff." />
+      <DraftInput
+        label="Greeting"
+        value={draft.greeting}
+        onChange={value => updateDraft(current => ({ ...current, greeting: value }))}
+      />
+      <DraftTextArea
+        label="Opening Paragraph"
+        rows={5}
+        value={draft.opening}
+        onChange={value => updateDraft(current => ({ ...current, opening: value }))}
+      />
+      {draft.body.map((paragraph, index) => (
+        <div className="nested-card" key={`paragraph-${index}`}>
+          <div className="nested-card-header">
+            <h3>Body Paragraph {index + 1}</h3>
+            <button type="button" onClick={() => updateDraft(current => ({ ...current, body: removeCoverLetterArrayItem(current.body, index) }))}>
+              <Trash2 size={16} />
+              <span>Remove</span>
+            </button>
+          </div>
+          <DraftTextArea
+            label="Paragraph Text"
+            rows={6}
+            value={paragraph.text}
+            onChange={value => updateBodyParagraph(updateDraft, index, value)}
+          />
+        </div>
+      ))}
+      <Button type="button" variant="bordered" onPress={() => updateDraft(addBodyParagraph)}>
+        <Plus size={16} />
+        <span>Add Paragraph</span>
+      </Button>
+      <DraftTextArea
+        label="Closing Paragraph"
+        rows={4}
+        value={draft.closing}
+        onChange={value => updateDraft(current => ({ ...current, closing: value }))}
+      />
+      <DraftInput
+        label="Signature"
+        value={draft.signature}
+        onChange={value => updateDraft(current => ({ ...current, signature: value }))}
+      />
+    </>
+  );
+}
+
+function JsonPreview({ generatedJsonText, title, description }) {
+  return (
+    <>
+      <EditorSectionHeading title={title} description={description} />
       <pre className="json-preview">{generatedJsonText}</pre>
     </>
   );
@@ -610,6 +775,13 @@ function updateEducation(updateDraft, index, patch) {
   updateDraft(current => ({
     ...current,
     education: updateArrayItem(current.education, index, patch)
+  }));
+}
+
+function updateBodyParagraph(updateDraft, index, value) {
+  updateDraft(current => ({
+    ...current,
+    body: updateArrayItem(current.body, index, { text: value })
   }));
 }
 

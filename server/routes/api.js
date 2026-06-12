@@ -11,6 +11,97 @@ import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
 
+function registerDraftRoutes(type) {
+  apiRouter.get(`/drafts/${type}/:slug`, async (req, res, next) => {
+    try {
+      const sourceDocument = await readDocument(type, req.params.slug);
+
+      if (!sourceDocument) {
+        res.status(404).json({ error: 'Source document not found' });
+        return;
+      }
+
+      res.json(await readDraftBundle(type, req.params.slug));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  apiRouter.post(`/drafts/${type}/:slug`, requireDraftEditor, async (req, res, next) => {
+    try {
+      const sourceDocument = await readDocument(type, req.params.slug);
+
+      if (!sourceDocument) {
+        res.status(404).json({ error: 'Source document not found' });
+        return;
+      }
+
+      const content = req.body?.content;
+
+      if (!content || typeof content !== 'object' || Array.isArray(content)) {
+        res.status(400).json({ error: 'Draft content must be a JSON object' });
+        return;
+      }
+
+      const bundle = await saveDraftBundle({
+        type,
+        slug: req.params.slug,
+        content,
+        sourceUpdatedAt: sourceDocument.meta?.updatedAt || null
+      });
+
+      res.status(201).json(bundle);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  apiRouter.delete(`/drafts/${type}/:slug`, requireDraftEditor, async (req, res, next) => {
+    try {
+      await deleteDraftBundle(type, req.params.slug);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  apiRouter.post(`/drafts/${type}/:slug/publish`, requireDraftEditor, async (req, res, next) => {
+    try {
+      if (getDataSource() !== 'database') {
+        res.status(400).json({ error: 'Publishing drafts requires DATA_SOURCE=database.' });
+        return;
+      }
+
+      const sourceDocument = await readDocument(type, req.params.slug);
+      if (!sourceDocument) {
+        res.status(404).json({ error: 'Source document not found' });
+        return;
+      }
+
+      const publishResult = await publishDraftBundle(type, req.params.slug, req.currentUser?.id || null);
+
+      if (publishResult?.status === 'missing_draft') {
+        res.status(400).json({ error: 'There is no saved draft to publish.' });
+        return;
+      }
+
+      const [document, draftBundle] = await Promise.all([
+        readDocument(type, req.params.slug),
+        readDraftBundle(type, req.params.slug)
+      ]);
+
+      res.json({
+        document,
+        draft: draftBundle.draft,
+        history: draftBundle.history || [],
+        publishedAt: publishResult?.publishedAt || new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+}
+
 apiRouter.get('/health', async (req, res) => {
   const health = {
     ok: true,
@@ -248,94 +339,8 @@ apiRouter.get('/documents/:type/:slug', async (req, res, next) => {
   }
 });
 
-apiRouter.get('/drafts/resume/:slug', async (req, res, next) => {
-  try {
-    const sourceDocument = await readDocument('resume', req.params.slug);
-
-    if (!sourceDocument) {
-      res.status(404).json({ error: 'Source document not found' });
-      return;
-    }
-
-    res.json(await readDraftBundle('resume', req.params.slug));
-  } catch (error) {
-    next(error);
-  }
-});
-
-apiRouter.post('/drafts/resume/:slug', requireDraftEditor, async (req, res, next) => {
-  try {
-    const sourceDocument = await readDocument('resume', req.params.slug);
-
-    if (!sourceDocument) {
-      res.status(404).json({ error: 'Source document not found' });
-      return;
-    }
-
-    const content = req.body?.content;
-
-    if (!content || typeof content !== 'object' || Array.isArray(content)) {
-      res.status(400).json({ error: 'Draft content must be a JSON object' });
-      return;
-    }
-
-    const bundle = await saveDraftBundle({
-      type: 'resume',
-      slug: req.params.slug,
-      content,
-      sourceUpdatedAt: sourceDocument.meta?.updatedAt || null
-    });
-
-    res.status(201).json(bundle);
-  } catch (error) {
-    next(error);
-  }
-});
-
-apiRouter.delete('/drafts/resume/:slug', requireDraftEditor, async (req, res, next) => {
-  try {
-    await deleteDraftBundle('resume', req.params.slug);
-    res.status(204).end();
-  } catch (error) {
-    next(error);
-  }
-});
-
-apiRouter.post('/drafts/resume/:slug/publish', requireDraftEditor, async (req, res, next) => {
-  try {
-    if (getDataSource() !== 'database') {
-      res.status(400).json({ error: 'Publishing drafts requires DATA_SOURCE=database.' });
-      return;
-    }
-
-    const sourceDocument = await readDocument('resume', req.params.slug);
-    if (!sourceDocument) {
-      res.status(404).json({ error: 'Source document not found' });
-      return;
-    }
-
-    const publishResult = await publishDraftBundle('resume', req.params.slug, req.currentUser?.id || null);
-
-    if (publishResult?.status === 'missing_draft') {
-      res.status(400).json({ error: 'There is no saved draft to publish.' });
-      return;
-    }
-
-    const [document, draftBundle] = await Promise.all([
-      readDocument('resume', req.params.slug),
-      readDraftBundle('resume', req.params.slug)
-    ]);
-
-    res.json({
-      document,
-      draft: draftBundle.draft,
-      history: draftBundle.history || [],
-      publishedAt: publishResult?.publishedAt || new Date().toISOString()
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+registerDraftRoutes('resume');
+registerDraftRoutes('cover-letter');
 
 apiRouter.use((error, req, res, next) => {
   console.error(error);

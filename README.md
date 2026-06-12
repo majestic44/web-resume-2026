@@ -54,7 +54,9 @@ API routes run through Express on port `3000` during local development:
 - `/api/documents/resume/jareth`
 - `/api/documents/cover-letter/jareth`
 - `/api/drafts/resume/:slug`
+- `/api/drafts/cover-letter/:slug`
 - `/api/drafts/resume/:slug/publish`
+- `/api/drafts/cover-letter/:slug/publish`
 - `/api/admin/members`
 - `/api/admin/profiles`
 
@@ -105,19 +107,19 @@ Tailwind CSS v4 is wired in through the Vite plugin and a CSS-first setup in `cl
 The editor now supports a full draft workflow:
 
 1. Open `/editor`
-2. Choose a profile and make changes
-3. Use **Save Draft** to store the latest working copy
-4. Use **Publish to Resume** to push the saved draft to the live public resume
-5. Use **Reset** to throw away the active draft and return to the current live resume
+2. Choose a profile and switch between `Resume` or `Cover Letter`
+3. Make changes and use **Save Draft** to store the latest working copy
+4. Use **Publish Live** to push the saved draft to the live public document
+5. Use **Reset** to throw away the active draft and return to the current live document
 
 Behavior by data source:
 
 - `DATA_SOURCE=seed`
-  - drafts are stored in `server/data/drafts/`
+  - resume and cover-letter drafts are stored in `server/data/drafts/`
   - draft history is stored locally
   - publishing is intentionally not supported
 - `DATA_SOURCE=database`
-  - drafts and draft history are stored in MariaDB
+  - resume and cover-letter drafts plus draft history are stored in MariaDB
   - publish copies the active draft into `documents.content_json`
   - publish clears the active draft but keeps draft history
 
