@@ -9,7 +9,7 @@ import { destroySession, requireDraftEditor, requireMemberManager, sessionCookie
 import { createMemberAccount, listMembers, updateMemberAccount } from '../repositories/adminRepository.js';
 import { authenticateUser, createUserSession } from '../repositories/authRepository.js';
 import { listProfiles, readDocument } from '../repositories/documentRepository.js';
-import { createProfileMedia, listProfileMedia } from '../repositories/mediaRepository.js';
+import { createProfileMedia, deleteProfileMedia, listProfileMedia, replaceProfileMedia } from '../repositories/mediaRepository.js';
 import {
   createPortfolioItem,
   deletePortfolioItem,
@@ -560,6 +560,63 @@ apiRouter.post('/admin/profiles/:slug/media', requireDraftEditor, upload.single(
       'Media library management requires DATA_SOURCE=database.',
       'A file upload is required.',
       'Only image and PDF uploads are supported right now.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:slug/media/:mediaId/replace', requireDraftEditor, upload.single('file'), async (req, res, next) => {
+  try {
+    const item = await replaceProfileMedia(req.params.slug, req.params.mediaId, req.file, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Media asset not found.' });
+      return;
+    }
+
+    res.json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Media library tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest media-library migration.')) {
+      return;
+    }
+
+    if ([
+      'Media library management requires DATA_SOURCE=database.',
+      'A file upload is required.',
+      'Only image and PDF uploads are supported right now.',
+      'A valid media asset id is required.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:slug/media/:mediaId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const result = await deleteProfileMedia(req.params.slug, req.params.mediaId);
+
+    if (result.status === 'missing_profile' || result.status === 'missing_media') {
+      res.status(404).json({ error: 'Media asset not found.' });
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Media library tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest media-library migration.')) {
+      return;
+    }
+
+    if ([
+      'Media library management requires DATA_SOURCE=database.',
+      'A valid media asset id is required.',
+      'This media asset is currently in use. Replace it first or remove its references before deleting it.'
     ].includes(error.message)) {
       res.status(400).json({ error: error.message });
       return;

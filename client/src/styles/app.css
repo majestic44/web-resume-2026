@@ -893,6 +893,14 @@ textarea {
   cursor: pointer;
 }
 
+.media-library-card__select-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  background: transparent;
+}
+
 .media-library-card--active {
   border-color: #2c7a7b;
   box-shadow: 0 0 0 2px rgba(44, 122, 123, 0.14);
@@ -944,6 +952,10 @@ textarea {
   gap: 8px;
 }
 
+.media-library-card__actions--stacked {
+  padding: 0 14px 14px;
+}
+
 .media-library-card__actions button {
   display: inline-flex;
   min-height: 36px;
@@ -955,6 +967,10 @@ textarea {
   color: #172033;
   background: #ffffff;
   font-weight: 700;
+}
+
+.media-library-card__file-input {
+  display: none;
 }
 
 .profile-photo-panel {

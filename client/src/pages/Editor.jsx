@@ -109,6 +109,10 @@ function formatBytes(value) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function replaceMediaPathValue(currentValue, fromPath, toPath) {
+  return currentValue === fromPath ? toPath : currentValue;
+}
+
 export function Editor({ authState }) {
   const [profiles, setProfiles] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState('jareth');
@@ -568,6 +572,7 @@ function ProfilePhotoLibrary({ profileSlug, authState, canEditSelectedProfile, c
   const [error, setError] = useState('');
   const [uploadState, setUploadState] = useState('idle');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [mediaActionId, setMediaActionId] = useState(null);
   const uploadInputRef = useRef(null);
 
   const canUseLibrary = authState.dataSource === 'database' && Boolean(authState.user) && canEditSelectedProfile && Boolean(profileSlug);
@@ -632,6 +637,63 @@ function ProfilePhotoLibrary({ profileSlug, authState, canEditSelectedProfile, c
     } catch (uploadError) {
       setError(uploadError.message);
       setUploadState('error');
+    }
+  };
+
+  const handleDeleteMedia = async mediaItem => {
+    const confirmed = window.confirm(`Delete profile image "${mediaItem.originalName}"?`);
+    if (!confirmed) return;
+
+    setMediaActionId(mediaItem.id);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/admin/profiles/${profileSlug}/media/${mediaItem.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Unable to delete profile image.');
+      }
+
+      setMediaItems(current => current.filter(item => item.id !== mediaItem.id));
+      if (currentValue === mediaItem.publicPath) {
+        onSelect('');
+      }
+    } catch (deleteError) {
+      setError(deleteError.message);
+    } finally {
+      setMediaActionId(null);
+    }
+  };
+
+  const handleReplaceMedia = async (mediaItem, file) => {
+    if (!file) return;
+
+    setMediaActionId(mediaItem.id);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/profiles/${profileSlug}/media/${mediaItem.id}/replace`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to replace profile image.');
+      }
+
+      setMediaItems(current => current.map(item => (item.id === mediaItem.id ? payload.item : item)));
+      onSelect(replaceMediaPathValue(currentValue, mediaItem.publicPath, payload.item.publicPath));
+    } catch (replaceError) {
+      setError(replaceError.message);
+    } finally {
+      setMediaActionId(null);
     }
   };
 
@@ -704,26 +766,66 @@ function ProfilePhotoLibrary({ profileSlug, authState, canEditSelectedProfile, c
           {mediaItems.length ? (
             <div className="media-library-grid">
               {mediaItems.slice(0, 8).map(item => (
-                <button
+                <ProfilePhotoCard
                   key={item.id}
-                  type="button"
-                  className={`media-library-card media-library-card--selectable${currentValue === item.publicPath ? ' media-library-card--active' : ''}`}
-                  onClick={() => onSelect(item.publicPath)}
-                >
-                  <div className="media-library-card__preview">
-                    <img src={item.publicPath} alt={item.originalName} loading="lazy" />
-                  </div>
-                  <div className="media-library-card__body">
-                    <p className="card-label">image</p>
-                    <h3>{item.originalName.replace(/\.[^.]+$/, '')}</h3>
-                    <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
-                  </div>
-                </button>
+                  item={item}
+                  isActive={currentValue === item.publicPath}
+                  isWorking={mediaActionId === item.id}
+                  onSelect={() => onSelect(item.publicPath)}
+                  onReplace={handleReplaceMedia}
+                  onDelete={handleDeleteMedia}
+                />
               ))}
             </div>
           ) : null}
         </>
       )}
+    </div>
+  );
+}
+
+function ProfilePhotoCard({ item, isActive, isWorking, onSelect, onReplace, onDelete }) {
+  const replaceInputRef = useRef(null);
+
+  return (
+    <div className={`media-library-card media-library-card--selectable${isActive ? ' media-library-card--active' : ''}`}>
+      <button type="button" className="media-library-card__select-button" onClick={onSelect} disabled={isWorking}>
+        <div className="media-library-card__preview">
+          <img src={item.publicPath} alt={item.originalName} loading="lazy" />
+        </div>
+        <div className="media-library-card__body">
+          <p className="card-label">image</p>
+          <h3>{item.originalName.replace(/\.[^.]+$/, '')}</h3>
+          <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
+        </div>
+      </button>
+      <div className="media-library-card__actions media-library-card__actions--stacked">
+        <button type="button" onClick={onSelect} disabled={isWorking}>
+          <ImagePlus size={15} />
+          <span>{isActive ? 'Selected' : 'Use Photo'}</span>
+        </button>
+        <button type="button" onClick={() => replaceInputRef.current?.click()} disabled={isWorking}>
+          <ImagePlus size={15} />
+          <span>Replace</span>
+        </button>
+        <button type="button" onClick={() => onDelete(item)} disabled={isWorking}>
+          <Trash2 size={15} />
+          <span>Delete</span>
+        </button>
+      </div>
+      <input
+        ref={replaceInputRef}
+        className="media-library-card__file-input"
+        type="file"
+        accept="image/*"
+        onChange={event => {
+          const nextFile = event.target.files?.[0] || null;
+          if (nextFile) {
+            onReplace(item, nextFile);
+          }
+          event.target.value = '';
+        }}
+      />
     </div>
   );
 }

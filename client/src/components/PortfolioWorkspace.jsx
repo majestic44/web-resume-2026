@@ -77,6 +77,14 @@ function mediaLabel(mediaItem) {
     .trim();
 }
 
+function replaceAssetFilePath(assets, fromPath, toPath) {
+  return (assets || []).map(asset => (
+    asset.filePath === fromPath
+      ? { ...asset, filePath: toPath }
+      : asset
+  ));
+}
+
 function buildItemStates(items) {
   return items.reduce((map, item) => {
     map[item.id] = {
@@ -339,7 +347,9 @@ function PortfolioProjectCard({ item, state, onPatch, onAssetChange, onAssetAdd,
   );
 }
 
-function MediaLibraryCard({ item, onUse, onCopy }) {
+function MediaLibraryCard({ item, onUse, onCopy, onReplace, onDelete, isWorking }) {
+  const replaceInputRef = useRef(null);
+
   return (
     <div className="media-library-card">
       <div className="media-library-card__preview">
@@ -362,15 +372,36 @@ function MediaLibraryCard({ item, onUse, onCopy }) {
         <h3>{mediaLabel(item)}</h3>
         <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
         <div className="media-library-card__actions">
-          <button type="button" onClick={() => onUse(item)}>
+          <button type="button" onClick={() => onUse(item)} disabled={isWorking}>
             <ImagePlus size={15} />
             <span>Use in Project</span>
           </button>
-          <button type="button" onClick={() => onCopy(item.publicPath)}>
+          <button type="button" onClick={() => onCopy(item.publicPath)} disabled={isWorking}>
             <Copy size={15} />
             <span>Copy Path</span>
           </button>
+          <button type="button" onClick={() => replaceInputRef.current?.click()} disabled={isWorking}>
+            <ImagePlus size={15} />
+            <span>Replace</span>
+          </button>
+          <button type="button" onClick={() => onDelete(item)} disabled={isWorking}>
+            <Trash2 size={15} />
+            <span>Delete</span>
+          </button>
         </div>
+        <input
+          ref={replaceInputRef}
+          className="media-library-card__file-input"
+          type="file"
+          accept="image/*,application/pdf"
+          onChange={event => {
+            const nextFile = event.target.files?.[0] || null;
+            if (nextFile) {
+              onReplace(item, nextFile);
+            }
+            event.target.value = '';
+          }}
+        />
       </div>
     </div>
   );
@@ -387,6 +418,7 @@ export function PortfolioWorkspace({ authState, profile }) {
   const [uploadState, setUploadState] = useState('idle');
   const [selectedUploadFile, setSelectedUploadFile] = useState(null);
   const [copiedPath, setCopiedPath] = useState('');
+  const [mediaActionId, setMediaActionId] = useState(null);
   const [createForm, setCreateForm] = useState(emptyCreateForm());
   const [createState, setCreateState] = useState('idle');
   const uploadInputRef = useRef(null);
@@ -656,6 +688,84 @@ export function PortfolioWorkspace({ authState, profile }) {
     }
   };
 
+  const replacePathAcrossWorkspace = (fromPath, toPath) => {
+    setCreateForm(current => ({
+      ...current,
+      assets: replaceAssetFilePath(current.assets, fromPath, toPath)
+    }));
+
+    setItemStates(current => Object.fromEntries(
+      Object.entries(current).map(([itemId, state]) => [
+        itemId,
+        {
+          ...state,
+          assets: replaceAssetFilePath(state.assets, fromPath, toPath)
+        }
+      ])
+    ));
+
+    if (copiedPath === fromPath) {
+      setCopiedPath(toPath);
+    }
+  };
+
+  const handleDeleteMedia = async mediaItem => {
+    const confirmed = window.confirm(`Delete media asset "${mediaItem.originalName}"?`);
+    if (!confirmed) return;
+
+    setMediaActionId(mediaItem.id);
+    setMediaError('');
+
+    try {
+      const response = await fetch(`/api/admin/profiles/${profile.slug}/media/${mediaItem.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Unable to delete media asset.');
+      }
+
+      setMediaItems(current => current.filter(item => item.id !== mediaItem.id));
+      if (copiedPath === mediaItem.publicPath) {
+        setCopiedPath('');
+      }
+    } catch (deleteError) {
+      setMediaError(deleteError.message);
+    } finally {
+      setMediaActionId(null);
+    }
+  };
+
+  const handleReplaceMedia = async (mediaItem, file) => {
+    if (!file) return;
+
+    setMediaActionId(mediaItem.id);
+    setMediaError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/profiles/${profile.slug}/media/${mediaItem.id}/replace`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to replace media asset.');
+      }
+
+      setMediaItems(current => current.map(item => (item.id === mediaItem.id ? payload.item : item)));
+      replacePathAcrossWorkspace(mediaItem.publicPath, payload.item.publicPath);
+    } catch (replaceError) {
+      setMediaError(replaceError.message);
+    } finally {
+      setMediaActionId(null);
+    }
+  };
+
   const useMediaInCreateForm = mediaItem => {
     const nextAsset = {
       assetType: mediaItem.kind === 'pdf' ? 'pdf' : 'image',
@@ -882,6 +992,9 @@ export function PortfolioWorkspace({ authState, profile }) {
                     item={item}
                     onUse={useMediaInCreateForm}
                     onCopy={copyMediaPath}
+                    onReplace={handleReplaceMedia}
+                    onDelete={handleDeleteMedia}
+                    isWorking={mediaActionId === item.id}
                   />
                 ))}
               </div>
