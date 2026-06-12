@@ -1,5 +1,8 @@
 import express from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import multer from 'multer';
+import { fileURLToPath } from 'node:url';
 import { getDataSource } from '../config/app.js';
 import { getDatabasePool } from '../config/database.js';
 import { destroySession, requireDraftEditor, requireMemberManager, sessionCookieName } from '../middleware/auth.js';
@@ -20,8 +23,24 @@ import { createProfile, listManagedProfiles, updateProfile } from '../repositori
 import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadTempDir = path.resolve(__dirname, '..', '..', '.tmp', 'uploads');
+fs.mkdirSync(uploadTempDir, { recursive: true });
+
+const uploadStorage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, uploadTempDir);
+  },
+  filename(req, file, cb) {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const originalExtension = path.extname(String(file.originalname || '')).toLowerCase();
+    cb(null, `upload-${uniqueSuffix}${originalExtension.slice(0, 12)}`);
+  }
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: uploadStorage,
   limits: {
     fileSize: 8 * 1024 * 1024
   }

@@ -887,6 +887,17 @@ textarea {
   background: #fbfdff;
 }
 
+.media-library-card--selectable {
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.media-library-card--active {
+  border-color: #2c7a7b;
+  box-shadow: 0 0 0 2px rgba(44, 122, 123, 0.14);
+}
+
 .media-library-card__preview {
   display: grid;
   min-height: 148px;
@@ -944,6 +955,52 @@ textarea {
   color: #172033;
   background: #ffffff;
   font-weight: 700;
+}
+
+.profile-photo-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.profile-photo-panel__current {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.profile-photo-panel__current img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid #d9e2ec;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(237, 250, 250, 0.72), rgba(248, 251, 253, 0.94));
+}
+
+.profile-photo-panel__upload {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.profile-photo-panel__upload-field {
+  max-width: none;
+  padding: 16px;
+}
+
+.profile-photo-panel__upload-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.profile-photo-panel__upload-copy p {
+  margin: 0;
 }
 
 .portfolio-project-card__head {
@@ -1791,6 +1848,11 @@ textarea {
   }
 
   .portfolio-project-card__head {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-photo-panel__current,
+  .profile-photo-panel__upload {
     grid-template-columns: 1fr;
   }
 

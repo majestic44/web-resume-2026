@@ -1,6 +1,6 @@
-import { Button, Card, Chip, Input, Label, TextArea, TextField } from '@heroui/react';
-import { Eye, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Chip, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
+import { Eye, ImagePlus, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { addBodyParagraph, coverLetterDraftToJson, createCoverLetterDraft, removeArrayItem as removeCoverLetterArrayItem } from '../lib/coverLetterDraft.js';
@@ -100,6 +100,13 @@ function documentCountSummary(type, json) {
     { label: 'Experience', value: json?.experience?.length || 0 },
     { label: 'Education', value: json?.education?.length || 0 }
   ];
+}
+
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function Editor({ authState }) {
@@ -420,7 +427,16 @@ export function Editor({ authState }) {
               <p className="muted">Loading {documentTypeTitle(selectedDocumentType)} draft...</p>
             ) : (
               <>
-                {activeSection === 'basics' ? <BasicsSection draft={draft} updateBasics={updateBasics} /> : null}
+                {activeSection === 'basics' ? (
+                  <BasicsSection
+                    draft={draft}
+                    updateBasics={updateBasics}
+                    selectedDocumentType={selectedDocumentType}
+                    selectedSlug={selectedSlug}
+                    authState={authState}
+                    canEditSelectedProfile={canEditSelectedProfile}
+                  />
+                ) : null}
                 {selectedDocumentType === 'resume' && activeSection === 'summary' ? (
                   <SummarySection draft={draft} updateDraft={updateDraft} updateSectionTitle={updateSectionTitle} />
                 ) : null}
@@ -518,7 +534,7 @@ export function Editor({ authState }) {
   );
 }
 
-function BasicsSection({ draft, updateBasics }) {
+function BasicsSection({ draft, updateBasics, selectedDocumentType, selectedSlug, authState, canEditSelectedProfile }) {
   return (
     <>
       <EditorSectionHeading title="Basics" description="Primary identity and contact fields for the document header." />
@@ -533,7 +549,182 @@ function BasicsSection({ draft, updateBasics }) {
         <DraftInput label="LinkedIn" value={draft.basics.linkedin} onChange={value => updateBasics('linkedin', value)} />
         <DraftInput label="Profile Image" value={draft.basics.image} onChange={value => updateBasics('image', value)} />
       </div>
+      {selectedDocumentType === 'resume' ? (
+        <ProfilePhotoLibrary
+          profileSlug={selectedSlug}
+          authState={authState}
+          canEditSelectedProfile={canEditSelectedProfile}
+          currentValue={draft.basics.image}
+          onSelect={value => updateBasics('image', value)}
+        />
+      ) : null}
     </>
+  );
+}
+
+function ProfilePhotoLibrary({ profileSlug, authState, canEditSelectedProfile, currentValue, onSelect }) {
+  const [mediaItems, setMediaItems] = useState([]);
+  const [status, setStatus] = useState('idle');
+  const [error, setError] = useState('');
+  const [uploadState, setUploadState] = useState('idle');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const uploadInputRef = useRef(null);
+
+  const canUseLibrary = authState.dataSource === 'database' && Boolean(authState.user) && canEditSelectedProfile && Boolean(profileSlug);
+
+  useEffect(() => {
+    if (!canUseLibrary) {
+      setStatus('idle');
+      setMediaItems([]);
+      setError('');
+      return;
+    }
+
+    setStatus('loading');
+    setError('');
+
+    fetch(`/api/admin/profiles/${profileSlug}/media`)
+      .then(async response => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || 'Unable to load profile media.');
+        }
+
+        return payload;
+      })
+      .then(payload => {
+        setMediaItems((payload.items || []).filter(item => item.kind === 'image'));
+        setStatus('ready');
+      })
+      .catch(loadError => {
+        setError(loadError.message);
+        setStatus('error');
+      });
+  }, [canUseLibrary, profileSlug]);
+
+  const handleUpload = async () => {
+    if (!selectedFile || !canUseLibrary) return;
+
+    setUploadState('uploading');
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch(`/api/admin/profiles/${profileSlug}/media`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to upload profile image.');
+      }
+
+      setMediaItems(current => [payload.item, ...current.filter(item => item.kind === 'image')]);
+      onSelect(payload.item.publicPath);
+      setSelectedFile(null);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = '';
+      }
+      setUploadState('uploaded');
+    } catch (uploadError) {
+      setError(uploadError.message);
+      setUploadState('error');
+    }
+  };
+
+  return (
+    <div className="profile-photo-panel">
+      <div className="editor-section-heading">
+        <h2>Profile Photo Library</h2>
+        <p>Upload or reuse an image from the media library for the public profile photo.</p>
+      </div>
+
+      {currentValue ? (
+        <div className="profile-photo-panel__current">
+          <img src={currentValue} alt="Current profile" />
+          <div>
+            <p className="card-label">Current Image</p>
+            <p className="field-help">{currentValue}</p>
+            <Button type="button" variant="bordered" onPress={() => onSelect('')}>
+              <Trash2 size={16} />
+              <span>Clear Image</span>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {!canUseLibrary ? (
+        <p className="field-help">
+          {authState.dataSource !== 'database'
+            ? 'Switch to database mode to upload and reuse profile photos from the media library.'
+            : authState.user
+              ? 'This account does not currently have access to the media library for the selected profile.'
+              : 'Sign in to use uploaded profile images from the media library.'}
+        </p>
+      ) : (
+        <>
+          {error ? <p className="editor-error">{error}</p> : null}
+
+          <div className="profile-photo-panel__upload">
+            <label className="form-panel profile-photo-panel__upload-field">
+              <span>Choose Image</span>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept="image/*"
+                onChange={event => setSelectedFile(event.target.files?.[0] || null)}
+              />
+            </label>
+            <div className="profile-photo-panel__upload-copy">
+              <p>{selectedFile ? selectedFile.name : 'No image selected yet.'}</p>
+              <p className="field-help">Supported image uploads are stored in the profile media library and can be reused in portfolio cards later.</p>
+            </div>
+            <Button type="button" onPress={handleUpload} isDisabled={!selectedFile || uploadState === 'uploading'}>
+              <ImagePlus size={16} />
+              <span>{uploadState === 'uploading' ? 'Uploading...' : 'Upload Image'}</span>
+            </Button>
+          </div>
+
+          {status === 'loading' ? (
+            <div className="loading-row">
+              <Spinner size="sm" />
+              <p>Loading profile images...</p>
+            </div>
+          ) : null}
+
+          {status === 'ready' && mediaItems.length === 0 ? (
+            <div className="media-library-empty">
+              <p>No uploaded images yet. Upload one above to start the profile photo library.</p>
+            </div>
+          ) : null}
+
+          {mediaItems.length ? (
+            <div className="media-library-grid">
+              {mediaItems.slice(0, 8).map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`media-library-card media-library-card--selectable${currentValue === item.publicPath ? ' media-library-card--active' : ''}`}
+                  onClick={() => onSelect(item.publicPath)}
+                >
+                  <div className="media-library-card__preview">
+                    <img src={item.publicPath} alt={item.originalName} loading="lazy" />
+                  </div>
+                  <div className="media-library-card__body">
+                    <p className="card-label">image</p>
+                    <h3>{item.originalName.replace(/\.[^.]+$/, '')}</h3>
+                    <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
 

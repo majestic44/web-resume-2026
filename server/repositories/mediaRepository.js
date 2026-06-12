@@ -8,6 +8,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicUploadsDir = path.resolve(__dirname, '..', '..', 'public', 'uploads');
 
+async function safeUnlink(filePath) {
+  if (!filePath) return;
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
 function sanitizeMediaAsset(row) {
   return {
     id: row.id,
@@ -57,7 +69,7 @@ function mediaKindFromMimeType(mimeType) {
 }
 
 function validateUploadFile(file) {
-  if (!file || !file.buffer || !file.originalname) {
+  if (!file || !file.path || !file.originalname) {
     throw new Error('A file upload is required.');
   }
 
@@ -124,6 +136,8 @@ export async function createProfileMedia(profileSlug, file, actorUserId = null) 
   const validated = validateUploadFile(file);
   const pool = getDatabasePool();
   const connection = await pool.getConnection();
+  let tempFilePath = file?.path || '';
+  let finalFilePath = '';
 
   try {
     await connection.beginTransaction();
@@ -131,6 +145,7 @@ export async function createProfileMedia(profileSlug, file, actorUserId = null) 
     const profile = await findActiveProfileBySlug(connection, profileSlug);
     if (!profile) {
       await connection.rollback();
+      await safeUnlink(tempFilePath);
       return null;
     }
 
@@ -138,10 +153,11 @@ export async function createProfileMedia(profileSlug, file, actorUserId = null) 
     const extension = normalizeStoredExtension(validated.originalName, validated.mimeType);
     const storedName = `${Date.now()}-${baseName}${extension}`;
     const profileUploadDir = await ensureProfileUploadDir(profile.slug);
-    const absoluteFilePath = path.join(profileUploadDir, storedName);
+    finalFilePath = path.join(profileUploadDir, storedName);
     const publicPath = `/uploads/${profile.slug}/${storedName}`;
 
-    await fs.writeFile(absoluteFilePath, file.buffer);
+    await fs.rename(tempFilePath, finalFilePath);
+    tempFilePath = '';
 
     const [result] = await connection.query(
       `
@@ -169,6 +185,8 @@ export async function createProfileMedia(profileSlug, file, actorUserId = null) 
     return rows[0] ? sanitizeMediaAsset(rows[0]) : null;
   } catch (error) {
     await connection.rollback();
+    await safeUnlink(tempFilePath);
+    await safeUnlink(finalFilePath);
     throw error;
   } finally {
     connection.release();
