@@ -19,6 +19,21 @@ import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
 
+function isMissingPortfolioSchemaError(error) {
+  return ['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code);
+}
+
+function respondIfPortfolioSchemaMissing(error, res) {
+  if (!isMissingPortfolioSchemaError(error)) {
+    return false;
+  }
+
+  res.status(503).json({
+    error: 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.'
+  });
+  return true;
+}
+
 function registerDraftRoutes(type) {
   apiRouter.get(`/drafts/${type}/:slug`, async (req, res, next) => {
     try {
@@ -152,6 +167,10 @@ apiRouter.get('/profiles/:slug/public', async (req, res, next) => {
 
     res.json(profile);
   } catch (error) {
+    if (respondIfPortfolioSchemaMissing(error, res)) {
+      return;
+    }
+
     next(error);
   }
 });
@@ -160,6 +179,10 @@ apiRouter.get('/profiles/:slug/portfolio', async (req, res, next) => {
   try {
     res.json({ items: await listPublicPortfolio(req.params.slug) });
   } catch (error) {
+    if (respondIfPortfolioSchemaMissing(error, res)) {
+      return;
+    }
+
     next(error);
   }
 });
@@ -374,6 +397,10 @@ apiRouter.get('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req,
   try {
     res.json({ items: await listManagedPortfolio(req.params.slug) });
   } catch (error) {
+    if (respondIfPortfolioSchemaMissing(error, res)) {
+      return;
+    }
+
     if (error.message === 'Portfolio item management requires DATA_SOURCE=database.') {
       res.status(400).json({ error: error.message });
       return;
@@ -396,6 +423,10 @@ apiRouter.post('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       res.status(409).json({ error: 'That portfolio slug is already in use for this profile.' });
+      return;
+    }
+
+    if (respondIfPortfolioSchemaMissing(error, res)) {
       return;
     }
 
@@ -424,6 +455,10 @@ apiRouter.patch('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, a
       return;
     }
 
+    if (respondIfPortfolioSchemaMissing(error, res)) {
+      return;
+    }
+
     if ([
       'Portfolio item management requires DATA_SOURCE=database.',
       'Portfolio title is required.',
@@ -449,6 +484,10 @@ apiRouter.delete('/admin/profiles/:slug/portfolio/:itemId', requireDraftEditor, 
 
     res.status(204).end();
   } catch (error) {
+    if (respondIfPortfolioSchemaMissing(error, res)) {
+      return;
+    }
+
     if (['Portfolio item management requires DATA_SOURCE=database.', 'A valid portfolio item id is required.'].includes(error.message)) {
       res.status(400).json({ error: error.message });
       return;

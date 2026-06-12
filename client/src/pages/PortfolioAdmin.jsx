@@ -97,6 +97,97 @@ function portfolioFormToPayload(form) {
   };
 }
 
+function getAssetHref(asset) {
+  return asset?.externalUrl || asset?.filePath || '';
+}
+
+function getAssetSourceHint(assetType) {
+  if (assetType === 'image') return 'Add a public image URL or a site path such as /images/project-photo.jpg.';
+  if (assetType === 'pdf') return 'Use a PDF URL or file path that visitors can open from the public portfolio.';
+  return 'Use a public link for GitHub, live demos, articles, references, or supporting documents.';
+}
+
+function PortfolioAssetFields({ asset, index, onChange, onRemove }) {
+  const assetHref = getAssetHref(asset);
+
+  return (
+    <div className="nested-card">
+      <div className="nested-card-header">
+        <h3>Asset {index + 1}</h3>
+        <button type="button" onClick={onRemove}>
+          <Trash2 size={16} />
+          <span>Remove</span>
+        </button>
+      </div>
+      <div className="form-grid two">
+        <label className="select-field">
+          <span>Asset Type</span>
+          <select value={asset.assetType} onChange={event => onChange({ assetType: event.target.value })}>
+            <option value="link">Link</option>
+            <option value="image">Image</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </label>
+        <TextField>
+          <Label>Label</Label>
+          <Input value={asset.label} onChange={event => onChange({ label: event.target.value })} />
+        </TextField>
+        <TextField>
+          <Label>File Path</Label>
+          <Input value={asset.filePath} onChange={event => onChange({ filePath: event.target.value })} />
+        </TextField>
+        <TextField>
+          <Label>External URL</Label>
+          <Input value={asset.externalUrl} onChange={event => onChange({ externalUrl: event.target.value })} />
+        </TextField>
+      </div>
+      <p className="field-help">{getAssetSourceHint(asset.assetType)}</p>
+      {asset.assetType === 'image' && assetHref ? (
+        <div className="portfolio-asset-preview">
+          <img src={assetHref} alt={asset.label || `Portfolio asset ${index + 1}`} loading="lazy" />
+        </div>
+      ) : null}
+      {asset.assetType !== 'image' && assetHref ? (
+        <a className="portfolio-asset-preview-link" href={assetHref} target="_blank" rel="noreferrer">
+          <span>Preview current asset</span>
+          <Eye size={16} />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function PortfolioAdvancedFields({ form, onPatch }) {
+  return (
+    <details className="portfolio-advanced-block">
+      <summary>Advanced portfolio details</summary>
+      <div className="portfolio-advanced-block__content">
+        <p className="field-help">Use these only when a project needs extra organization or filtering. Most portfolio items can skip them.</p>
+        <div className="form-grid two">
+          <TextField>
+            <Label>Slug</Label>
+            <Input value={form.slug} onChange={event => onPatch({ slug: normalizeSlug(event.target.value) })} />
+          </TextField>
+          <TextField>
+            <Label>Category</Label>
+            <Input value={form.category} onChange={event => onPatch({ category: event.target.value })} />
+          </TextField>
+          <TextField>
+            <Label>Sort Order</Label>
+            <Input type="number" value={String(form.sortOrder)} onChange={event => onPatch({ sortOrder: event.target.value })} />
+          </TextField>
+        </div>
+
+        <TextField>
+          <Label>Skills</Label>
+          <TextArea rows={4} value={form.skillsText} onChange={event => onPatch({ skillsText: event.target.value })} />
+          <p className="field-help">Optional. Add project-specific skills only if they help explain this work sample.</p>
+        </TextField>
+      </div>
+    </details>
+  );
+}
+
 export function PortfolioAdmin({ authState }) {
   const [profiles, setProfiles] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState('');
@@ -347,7 +438,7 @@ export function PortfolioAdmin({ authState }) {
                 <div>
                   <p className="card-label">Create Portfolio Item</p>
                   <h2>Add a public work sample</h2>
-                  <p className="field-help">Choose a profile, describe the project or work sample, and attach public links or file paths.</p>
+                  <p className="field-help">Focus on project proof: a clear title, short summary, description, photos, and links. The rest is optional.</p>
                 </div>
 
                 <div className="form-grid two">
@@ -368,14 +459,6 @@ export function PortfolioAdmin({ authState }) {
                     />
                   </TextField>
                   <TextField>
-                    <Label>Slug</Label>
-                    <Input value={createForm.slug} onChange={event => updateCreateForm({ slug: normalizeSlug(event.target.value) })} />
-                  </TextField>
-                  <TextField>
-                    <Label>Category</Label>
-                    <Input value={createForm.category} onChange={event => updateCreateForm({ category: event.target.value })} />
-                  </TextField>
-                  <TextField>
                     <Label>Summary</Label>
                     <Input value={createForm.summary} onChange={event => updateCreateForm({ summary: event.target.value })} />
                   </TextField>
@@ -387,21 +470,11 @@ export function PortfolioAdmin({ authState }) {
                       <option value="public">Public</option>
                     </select>
                   </label>
-                  <TextField>
-                    <Label>Sort Order</Label>
-                    <Input type="number" value={String(createForm.sortOrder)} onChange={event => updateCreateForm({ sortOrder: event.target.value })} />
-                  </TextField>
                 </div>
 
                 <TextField>
                   <Label>Description</Label>
                   <TextArea rows={5} value={createForm.description} onChange={event => updateCreateForm({ description: event.target.value })} />
-                </TextField>
-
-                <TextField>
-                  <Label>Skills</Label>
-                  <TextArea rows={4} value={createForm.skillsText} onChange={event => updateCreateForm({ skillsText: event.target.value })} />
-                  <p className="field-help">One skill per line, or separate skills with commas.</p>
                 </TextField>
 
                 <label className="portfolio-checkbox">
@@ -413,44 +486,23 @@ export function PortfolioAdmin({ authState }) {
                   <span>Feature this portfolio item</span>
                 </label>
 
+                <PortfolioAdvancedFields form={createForm} onPatch={updateCreateForm} />
+
                 <div className="portfolio-assets-block">
                   <div className="assignment-header">
                     <strong>Assets</strong>
                     <span>{createForm.assets.length} item{createForm.assets.length === 1 ? '' : 's'}</span>
                   </div>
+                  <p className="field-help">Add project photos, public links, and supporting PDFs. Image assets will display directly on the public profile.</p>
                   <div className="portfolio-assets-list">
                     {createForm.assets.map((asset, index) => (
-                      <div className="nested-card" key={`create-asset-${index}`}>
-                        <div className="nested-card-header">
-                          <h3>Asset {index + 1}</h3>
-                          <button type="button" onClick={() => removeCreateAsset(index)}>
-                            <Trash2 size={16} />
-                            <span>Remove</span>
-                          </button>
-                        </div>
-                        <div className="form-grid two">
-                          <label className="select-field">
-                            <span>Asset Type</span>
-                            <select value={asset.assetType} onChange={event => updateCreateAsset(index, { assetType: event.target.value })}>
-                              <option value="link">Link</option>
-                              <option value="image">Image</option>
-                              <option value="pdf">PDF</option>
-                            </select>
-                          </label>
-                          <TextField>
-                            <Label>Label</Label>
-                            <Input value={asset.label} onChange={event => updateCreateAsset(index, { label: event.target.value })} />
-                          </TextField>
-                          <TextField>
-                            <Label>File Path</Label>
-                            <Input value={asset.filePath} onChange={event => updateCreateAsset(index, { filePath: event.target.value })} />
-                          </TextField>
-                          <TextField>
-                            <Label>External URL</Label>
-                            <Input value={asset.externalUrl} onChange={event => updateCreateAsset(index, { externalUrl: event.target.value })} />
-                          </TextField>
-                        </div>
-                      </div>
+                      <PortfolioAssetFields
+                        key={`create-asset-${index}`}
+                        asset={asset}
+                        index={index}
+                        onChange={patch => updateCreateAsset(index, patch)}
+                        onRemove={() => removeCreateAsset(index)}
+                      />
                     ))}
                   </div>
                   <Button type="button" variant="bordered" onPress={addCreateAsset}>
@@ -545,20 +597,6 @@ export function PortfolioAdmin({ authState }) {
                           })}
                         />
                       </TextField>
-                      <TextField>
-                        <Label>Slug</Label>
-                        <Input
-                          value={state.slug}
-                          onChange={event => updateItemState(item.id, { slug: normalizeSlug(event.target.value), saved: false })}
-                        />
-                      </TextField>
-                      <TextField>
-                        <Label>Category</Label>
-                        <Input
-                          value={state.category}
-                          onChange={event => updateItemState(item.id, { category: event.target.value, saved: false })}
-                        />
-                      </TextField>
                       <label className="select-field">
                         <span>Visibility</span>
                         <select
@@ -577,24 +615,11 @@ export function PortfolioAdmin({ authState }) {
                           onChange={event => updateItemState(item.id, { summary: event.target.value, saved: false })}
                         />
                       </TextField>
-                      <TextField>
-                        <Label>Sort Order</Label>
-                        <Input
-                          type="number"
-                          value={String(state.sortOrder)}
-                          onChange={event => updateItemState(item.id, { sortOrder: event.target.value, saved: false })}
-                        />
-                      </TextField>
                     </div>
 
                     <TextField>
                       <Label>Description</Label>
                       <TextArea rows={5} value={state.description} onChange={event => updateItemState(item.id, { description: event.target.value, saved: false })} />
-                    </TextField>
-
-                    <TextField>
-                      <Label>Skills</Label>
-                      <TextArea rows={4} value={state.skillsText} onChange={event => updateItemState(item.id, { skillsText: event.target.value, saved: false })} />
                     </TextField>
 
                     <label className="portfolio-checkbox">
@@ -606,44 +631,26 @@ export function PortfolioAdmin({ authState }) {
                       <span>Feature this portfolio item</span>
                     </label>
 
+                    <PortfolioAdvancedFields
+                      form={state}
+                      onPatch={patch => updateItemState(item.id, { ...patch, saved: false })}
+                    />
+
                     <div className="portfolio-assets-block">
                       <div className="assignment-header">
                         <strong>Assets</strong>
                         <span>{state.assets.length} item{state.assets.length === 1 ? '' : 's'}</span>
                       </div>
+                      <p className="field-help">Add project photos, public links, and supporting PDFs. Image assets will display directly on the public profile.</p>
                       <div className="portfolio-assets-list">
                         {state.assets.map((asset, index) => (
-                          <div className="nested-card" key={`${item.id}-asset-${index}`}>
-                            <div className="nested-card-header">
-                              <h3>Asset {index + 1}</h3>
-                              <button type="button" onClick={() => removeItemAsset(item.id, index)}>
-                                <Trash2 size={16} />
-                                <span>Remove</span>
-                              </button>
-                            </div>
-                            <div className="form-grid two">
-                              <label className="select-field">
-                                <span>Asset Type</span>
-                                <select value={asset.assetType} onChange={event => updateItemAsset(item.id, index, { assetType: event.target.value })}>
-                                  <option value="link">Link</option>
-                                  <option value="image">Image</option>
-                                  <option value="pdf">PDF</option>
-                                </select>
-                              </label>
-                              <TextField>
-                                <Label>Label</Label>
-                                <Input value={asset.label} onChange={event => updateItemAsset(item.id, index, { label: event.target.value })} />
-                              </TextField>
-                              <TextField>
-                                <Label>File Path</Label>
-                                <Input value={asset.filePath} onChange={event => updateItemAsset(item.id, index, { filePath: event.target.value })} />
-                              </TextField>
-                              <TextField>
-                                <Label>External URL</Label>
-                                <Input value={asset.externalUrl} onChange={event => updateItemAsset(item.id, index, { externalUrl: event.target.value })} />
-                              </TextField>
-                            </div>
-                          </div>
+                          <PortfolioAssetFields
+                            key={`${item.id}-asset-${index}`}
+                            asset={asset}
+                            index={index}
+                            onChange={patch => updateItemAsset(item.id, index, patch)}
+                            onRemove={() => removeItemAsset(item.id, index)}
+                          />
                         ))}
                       </div>
                       <Button type="button" variant="bordered" onPress={() => addItemAsset(item.id)}>

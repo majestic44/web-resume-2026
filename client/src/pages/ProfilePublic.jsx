@@ -10,6 +10,17 @@ function getInitials(name) {
     .join('');
 }
 
+function getAssetHref(asset) {
+  return asset?.externalUrl || asset?.filePath || '';
+}
+
+function getAssetLabel(asset) {
+  if (asset?.label) return asset.label;
+  if (asset?.assetType === 'pdf') return 'View PDF';
+  if (asset?.assetType === 'image') return 'View Photo';
+  return 'Open Link';
+}
+
 export function ProfilePublic({ pathname }) {
   const slug = useMemo(() => pathname.split('/')[2] || '', [pathname]);
   const [state, setState] = useState({ status: 'loading', payload: null });
@@ -103,43 +114,78 @@ export function ProfilePublic({ pathname }) {
 
         {portfolioItems.length ? (
           <section className="portfolio-grid" aria-label="Portfolio items">
-            {portfolioItems.map(item => (
-              <article className="portfolio-card" key={item.id || item.slug}>
-                <div className="portfolio-card__header">
-                  <div className="portfolio-card__icon">
-                    <BriefcaseBusiness size={18} />
-                  </div>
-                  <div>
-                    <p className="card-label">{item.category || 'Portfolio Item'}</p>
-                    <h3>{item.title}</h3>
-                  </div>
-                </div>
+            {portfolioItems.map(item => {
+              const imageAssets = (item.assets || []).filter(asset => asset.assetType === 'image' && getAssetHref(asset));
+              const supportingAssets = (item.assets || []).filter(asset => asset.assetType !== 'image' && getAssetHref(asset));
 
-                {item.summary ? <p className="portfolio-card__summary">{item.summary}</p> : null}
-                {item.description ? <p className="portfolio-card__description">{item.description}</p> : null}
-
-                {item.skills?.length ? (
-                  <div className="portfolio-card__skills">
-                    {item.skills.map(skill => <span key={skill}>{skill}</span>)}
+              return (
+                <article className="portfolio-card" key={item.id || item.slug}>
+                  <div className="portfolio-card__header">
+                    <div className="portfolio-card__icon">
+                      <BriefcaseBusiness size={18} />
+                    </div>
+                    <div>
+                      <p className="card-label">{item.category || 'Portfolio Item'}</p>
+                      <h3>{item.title}</h3>
+                    </div>
                   </div>
-                ) : null}
 
-                {item.assets?.length ? (
-                  <div className="portfolio-card__assets">
-                    {item.assets.map(asset => (
-                      <a
-                        key={asset.id || `${item.id}-${asset.label}-${asset.externalUrl}-${asset.filePath}`}
-                        className="portfolio-card__asset-link"
-                        href={asset.externalUrl || asset.filePath || '#'}
-                      >
-                        <span>{asset.label || asset.assetType}</span>
-                        <ExternalLink size={14} />
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
+                  {imageAssets.length ? (
+                    <div className={`portfolio-card__gallery${imageAssets.length === 1 ? ' portfolio-card__gallery--single' : ''}`}>
+                      {imageAssets.map((asset, index) => {
+                        const href = getAssetHref(asset);
+                        return (
+                          <a
+                            key={asset.id || `${item.id}-${asset.label}-${href}`}
+                            className="portfolio-card__image-link"
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <img
+                              className="portfolio-card__image"
+                              src={href}
+                              alt={asset.label || `${item.title} project photo ${index + 1}`}
+                              loading="lazy"
+                            />
+                            {asset.label ? <span className="portfolio-card__image-caption">{asset.label}</span> : null}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {item.summary ? <p className="portfolio-card__summary">{item.summary}</p> : null}
+                  {item.description ? <p className="portfolio-card__description">{item.description}</p> : null}
+
+                  {item.skills?.length ? (
+                    <div className="portfolio-card__skills">
+                      {item.skills.map(skill => <span key={skill}>{skill}</span>)}
+                    </div>
+                  ) : null}
+
+                  {supportingAssets.length ? (
+                    <div className="portfolio-card__assets">
+                      {supportingAssets.map(asset => {
+                        const href = getAssetHref(asset);
+                        return (
+                          <a
+                            key={asset.id || `${item.id}-${asset.label}-${href}`}
+                            className="portfolio-card__asset-link"
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <span>{getAssetLabel(asset)}</span>
+                            <ExternalLink size={14} />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </section>
         ) : (
           <section className="directory-empty-state">
