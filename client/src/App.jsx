@@ -1,5 +1,5 @@
 import { Chip } from '@heroui/react';
-import { BriefcaseBusiness, FilePenLine, FolderPlus, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
+import { FilePenLine, FolderPlus, ImagePlus, LayoutDashboard, LogIn, PanelsTopLeft, Shapes, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { DocumentPage } from './pages/DocumentPage.jsx';
@@ -25,7 +25,7 @@ const routes = {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/editor', label: 'Editor', icon: FilePenLine },
-  { href: '/portfolio', label: 'Portfolio', icon: BriefcaseBusiness },
+  { href: '/portfolio', label: 'Media', icon: ImagePlus },
   { href: '/profiles', label: 'Profiles', icon: FolderPlus },
   { href: '/members', label: 'Members', icon: Users },
   { href: '/templates', label: 'Templates', icon: Shapes },

@@ -875,7 +875,7 @@ export function PortfolioWorkspace({ authState, profile }) {
                 <strong>Project Assets</strong>
                 <span>{createForm.assets.length} item{createForm.assets.length === 1 ? '' : 's'}</span>
               </div>
-              <p className="field-help">Add at least one image if you want the project to appear as a visual gallery card.</p>
+              <p className="field-help">Add at least one image if you want the project to appear as a visual gallery card. Upload files on the Media page, then paste the saved path here.</p>
               <div className="portfolio-assets-list">
                 {createForm.assets.map((asset, index) => (
                   <PortfolioAssetFields
@@ -937,94 +937,23 @@ export function PortfolioWorkspace({ authState, profile }) {
       </section>
 
       <section className="members-layout">
-        <Card className="form-panel members-create-panel media-library-panel">
+        <Card className="form-panel members-create-panel">
           <Card.Content className="form-stack">
             <div>
-              <p className="card-label">Media Library</p>
-              <h2>Upload reusable project assets</h2>
-              <p className="field-help">Upload images and PDFs once, then reuse them in portfolio projects without manually typing file paths.</p>
+              <p className="card-label">Media Workflow</p>
+              <h2>Upload assets from the Media page</h2>
+              <p className="field-help">Portfolio cards stay here in the editor. Image and PDF uploads now live on the Media page so file management stays in one dedicated place.</p>
             </div>
-
-            {mediaError ? <p className="editor-error">{mediaError}</p> : null}
-
-            <div className="form-grid two">
-              <label className="form-panel">
-                <span>Choose File</span>
-                <input
-                  ref={uploadInputRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={event => setSelectedUploadFile(event.target.files?.[0] || null)}
-                />
-              </label>
-              <div className="media-library-panel__upload-meta">
-                <p>{selectedUploadFile ? selectedUploadFile.name : 'No file selected yet.'}</p>
-                <p className="field-help">Supported: images and PDFs up to 8MB.</p>
-              </div>
-            </div>
-
             <div className="toolbar">
-              <Button type="button" onPress={handleUpload} isDisabled={!selectedUploadFile || uploadState === 'uploading'}>
-                <ImagePlus size={16} />
-                <span>{uploadState === 'uploading' ? 'Uploading...' : 'Upload to Library'}</span>
-              </Button>
-              {uploadState === 'uploaded' ? <p className="editor-success">File uploaded to the media library.</p> : null}
+              <a className="hero-link-button" href="/portfolio">
+                <ExternalLink size={16} />
+                <span>Open Media Library</span>
+              </a>
+              <a className="hero-link-button" href={publicProfileLink}>
+                <Eye size={16} />
+                <span>Preview Profile</span>
+              </a>
             </div>
-
-            {mediaStatus === 'loading' ? (
-              <div className="loading-row">
-                <Spinner size="sm" />
-                <p>Loading media library...</p>
-              </div>
-            ) : null}
-
-            {mediaStatus === 'ready' && mediaItems.length === 0 ? (
-              <div className="media-library-empty">
-                <p>No uploaded assets yet. Upload an image or PDF to start building the library.</p>
-              </div>
-            ) : null}
-
-            {mediaItems.length ? (
-              <div className="media-library-grid">
-                {mediaItems.slice(0, 12).map(item => (
-                  <MediaLibraryCard
-                    key={item.id}
-                    item={item}
-                    onUse={useMediaInCreateForm}
-                    onCopy={copyMediaPath}
-                    onReplace={handleReplaceMedia}
-                    onDelete={handleDeleteMedia}
-                    isWorking={mediaActionId === item.id}
-                  />
-                ))}
-              </div>
-            ) : null}
-
-            {copiedPath ? <p className="field-help">Copied path: {copiedPath}</p> : null}
-          </Card.Content>
-        </Card>
-
-        <Card className="members-summary-card">
-          <Card.Content className="form-stack">
-            <div>
-              <p className="card-label">Library Summary</p>
-              <h2>{mediaItems.length} asset{mediaItems.length === 1 ? '' : 's'}</h2>
-              <p className="field-help">Use uploaded files in portfolio cards now, with profile photos and broader reuse next.</p>
-            </div>
-            <dl className="snapshot-list compact">
-              <div>
-                <dt>Images</dt>
-                <dd>{mediaItems.filter(item => item.kind === 'image').length}</dd>
-              </div>
-              <div>
-                <dt>PDFs</dt>
-                <dd>{mediaItems.filter(item => item.kind === 'pdf').length}</dd>
-              </div>
-              <div>
-                <dt>Recent</dt>
-                <dd>{mediaItems[0] ? mediaLabel(mediaItems[0]) : 'None yet'}</dd>
-              </div>
-            </dl>
           </Card.Content>
         </Card>
       </section>

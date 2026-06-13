@@ -946,10 +946,19 @@ textarea {
   font-size: 0.88rem;
 }
 
+.media-library-card__path {
+  margin: 0;
+  word-break: break-all;
+}
+
 .media-library-card__actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.media-library-card__actions .hero-link-button {
+  justify-content: center;
 }
 
 .media-library-card__actions--stacked {

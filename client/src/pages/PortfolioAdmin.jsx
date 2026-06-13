@@ -1,202 +1,93 @@
-import { Alert, Button, Card, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { Eye, Plus, Save, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Spinner } from '@heroui/react';
+import { Copy, ExternalLink, FileImage, FileText, ImagePlus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 
-function normalizeSlug(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function blankAsset(sortOrder = 0) {
-  return {
-    assetType: 'link',
-    label: '',
-    filePath: '',
-    externalUrl: '',
-    sortOrder
-  };
+function mediaLabel(mediaItem) {
+  return String(mediaItem?.originalName || '')
+    .replace(/\.[^.]+$/, '')
+    .trim();
 }
 
-function emptyCreateForm() {
-  return {
-    title: '',
-    slug: '',
-    summary: '',
-    description: '',
-    category: '',
-    skillsText: '',
-    visibility: 'public',
-    featured: false,
-    sortOrder: 0,
-    assets: [blankAsset(0)]
-  };
-}
-
-function skillsToText(skills) {
-  return Array.isArray(skills) ? skills.join('\n') : '';
-}
-
-function buildItemStates(items) {
-  return items.reduce((map, item) => {
-    map[item.id] = {
-      title: item.title || '',
-      slug: item.slug || '',
-      summary: item.summary || '',
-      description: item.description || '',
-      category: item.category || '',
-      skillsText: skillsToText(item.skills),
-      visibility: item.visibility || 'private',
-      featured: Boolean(item.featured),
-      sortOrder: item.sortOrder ?? 0,
-      assets: Array.isArray(item.assets) && item.assets.length
-        ? item.assets.map((asset, index) => ({
-            assetType: asset.assetType || 'link',
-            label: asset.label || '',
-            filePath: asset.filePath || '',
-            externalUrl: asset.externalUrl || '',
-            sortOrder: asset.sortOrder ?? index
-          }))
-        : [blankAsset(0)],
-      saving: false,
-      saved: false,
-      deleting: false,
-      error: ''
-    };
-    return map;
-  }, {});
-}
-
-function portfolioFormToPayload(form) {
-  return {
-    title: form.title,
-    slug: normalizeSlug(form.slug || form.title),
-    summary: form.summary,
-    description: form.description,
-    category: form.category,
-    skills: String(form.skillsText || '')
-      .split(/\r?\n|,/)
-      .map(item => item.trim())
-      .filter(Boolean),
-    visibility: form.visibility,
-    featured: Boolean(form.featured),
-    sortOrder: Number(form.sortOrder || 0),
-    assets: (form.assets || [])
-      .map((asset, index) => ({
-        assetType: asset.assetType,
-        label: asset.label,
-        filePath: asset.filePath,
-        externalUrl: asset.externalUrl,
-        sortOrder: Number(asset.sortOrder ?? index)
-      }))
-      .filter(asset => asset.assetType && (asset.filePath || asset.externalUrl))
-  };
-}
-
-function getAssetHref(asset) {
-  return asset?.externalUrl || asset?.filePath || '';
-}
-
-function getAssetSourceHint(assetType) {
-  if (assetType === 'image') return 'Add a public image URL or a site path such as /images/project-photo.jpg.';
-  if (assetType === 'pdf') return 'Use a PDF URL or file path that visitors can open from the public portfolio.';
-  return 'Use a public link for GitHub, live demos, articles, references, or supporting documents.';
-}
-
-function PortfolioAssetFields({ asset, index, onChange, onRemove }) {
-  const assetHref = getAssetHref(asset);
+function MediaLibraryCard({ item, isWorking, onCopy, onReplace, onDelete }) {
+  const replaceInputRef = useRef(null);
 
   return (
-    <div className="nested-card">
-      <div className="nested-card-header">
-        <h3>Asset {index + 1}</h3>
-        <button type="button" onClick={onRemove}>
-          <Trash2 size={16} />
-          <span>Remove</span>
-        </button>
+    <div className="media-library-card">
+      <div className="media-library-card__preview">
+        {item.kind === 'image' ? (
+          <img src={item.publicPath} alt={item.originalName} loading="lazy" />
+        ) : item.kind === 'pdf' ? (
+          <div className="media-library-card__placeholder">
+            <FileText size={22} />
+            <span>PDF</span>
+          </div>
+        ) : (
+          <div className="media-library-card__placeholder">
+            <FileImage size={22} />
+            <span>File</span>
+          </div>
+        )}
       </div>
-      <div className="form-grid two">
-        <label className="select-field">
-          <span>Asset Type</span>
-          <select value={asset.assetType} onChange={event => onChange({ assetType: event.target.value })}>
-            <option value="link">Link</option>
-            <option value="image">Image</option>
-            <option value="pdf">PDF</option>
-          </select>
-        </label>
-        <TextField>
-          <Label>Label</Label>
-          <Input value={asset.label} onChange={event => onChange({ label: event.target.value })} />
-        </TextField>
-        <TextField>
-          <Label>File Path</Label>
-          <Input value={asset.filePath} onChange={event => onChange({ filePath: event.target.value })} />
-        </TextField>
-        <TextField>
-          <Label>External URL</Label>
-          <Input value={asset.externalUrl} onChange={event => onChange({ externalUrl: event.target.value })} />
-        </TextField>
-      </div>
-      <p className="field-help">{getAssetSourceHint(asset.assetType)}</p>
-      {asset.assetType === 'image' && assetHref ? (
-        <div className="portfolio-asset-preview">
-          <img src={assetHref} alt={asset.label || `Portfolio asset ${index + 1}`} loading="lazy" />
+      <div className="media-library-card__body">
+        <p className="card-label">{item.kind}</p>
+        <h3>{mediaLabel(item)}</h3>
+        <p className="media-library-card__meta">{formatBytes(item.sizeBytes)}</p>
+        <p className="field-help media-library-card__path">{item.publicPath}</p>
+        <div className="media-library-card__actions">
+          <a className="hero-link-button" href={item.publicPath} target="_blank" rel="noreferrer">
+            <ExternalLink size={15} />
+            <span>Open File</span>
+          </a>
+          <button type="button" onClick={() => onCopy(item.publicPath)} disabled={isWorking}>
+            <Copy size={15} />
+            <span>Copy Path</span>
+          </button>
+          <button type="button" onClick={() => replaceInputRef.current?.click()} disabled={isWorking}>
+            <ImagePlus size={15} />
+            <span>Replace</span>
+          </button>
+          <button type="button" onClick={() => onDelete(item)} disabled={isWorking}>
+            <Trash2 size={15} />
+            <span>Delete</span>
+          </button>
         </div>
-      ) : null}
-      {asset.assetType !== 'image' && assetHref ? (
-        <a className="portfolio-asset-preview-link" href={assetHref} target="_blank" rel="noreferrer">
-          <span>Preview current asset</span>
-          <Eye size={16} />
-        </a>
-      ) : null}
+        <input
+          ref={replaceInputRef}
+          className="media-library-card__file-input"
+          type="file"
+          accept="image/*,application/pdf"
+          onChange={event => {
+            const nextFile = event.target.files?.[0] || null;
+            if (nextFile) {
+              onReplace(item, nextFile);
+            }
+            event.target.value = '';
+          }}
+        />
+      </div>
     </div>
-  );
-}
-
-function PortfolioAdvancedFields({ form, onPatch }) {
-  return (
-    <details className="portfolio-advanced-block">
-      <summary>Advanced portfolio details</summary>
-      <div className="portfolio-advanced-block__content">
-        <p className="field-help">Use these only when a project needs extra organization or filtering. Most portfolio items can skip them.</p>
-        <div className="form-grid two">
-          <TextField>
-            <Label>Slug</Label>
-            <Input value={form.slug} onChange={event => onPatch({ slug: normalizeSlug(event.target.value) })} />
-          </TextField>
-          <TextField>
-            <Label>Category</Label>
-            <Input value={form.category} onChange={event => onPatch({ category: event.target.value })} />
-          </TextField>
-          <TextField>
-            <Label>Sort Order</Label>
-            <Input type="number" value={String(form.sortOrder)} onChange={event => onPatch({ sortOrder: event.target.value })} />
-          </TextField>
-        </div>
-
-        <TextField>
-          <Label>Skills</Label>
-          <TextArea rows={4} value={form.skillsText} onChange={event => onPatch({ skillsText: event.target.value })} />
-          <p className="field-help">Optional. Add project-specific skills only if they help explain this work sample.</p>
-        </TextField>
-      </div>
-    </details>
   );
 }
 
 export function PortfolioAdmin({ authState }) {
   const [profiles, setProfiles] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState('');
-  const [items, setItems] = useState([]);
-  const [itemStates, setItemStates] = useState({});
+  const [mediaItems, setMediaItems] = useState([]);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
-  const [createForm, setCreateForm] = useState(emptyCreateForm());
-  const [createState, setCreateState] = useState('idle');
+  const [uploadState, setUploadState] = useState('idle');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [mediaActionId, setMediaActionId] = useState(null);
+  const [copiedPath, setCopiedPath] = useState('');
+  const uploadInputRef = useRef(null);
 
   const canManage = authState.dataSource === 'database' && ['owner', 'admin', 'editor'].includes(authState.user?.role);
 
@@ -232,25 +123,24 @@ export function PortfolioAdmin({ authState }) {
   useEffect(() => {
     if (!canManage || !selectedSlug) {
       setStatus('ready');
+      setMediaItems([]);
       return;
     }
 
     setStatus('loading');
     setError('');
 
-    fetch(`/api/admin/profiles/${selectedSlug}/portfolio`)
+    fetch(`/api/admin/profiles/${selectedSlug}/media`)
       .then(async response => {
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || 'Unable to load portfolio items.');
+          throw new Error(payload.error || 'Unable to load media library.');
         }
 
-        return response.json();
+        return payload;
       })
       .then(payload => {
-        const nextItems = payload.items || [];
-        setItems(nextItems);
-        setItemStates(buildItemStates(nextItems));
+        setMediaItems(payload.items || []);
         setStatus('ready');
       })
       .catch(loadError => {
@@ -260,171 +150,133 @@ export function PortfolioAdmin({ authState }) {
   }, [canManage, selectedSlug]);
 
   const selectedProfile = profiles.find(profile => profile.slug === selectedSlug);
+  const publicProfileLink = selectedProfile?.profileLink || `/profile/${selectedProfile?.slug || ''}`;
 
-  const updateCreateForm = patch => {
-    setCreateForm(current => ({ ...current, ...patch }));
-  };
+  const counts = useMemo(() => ({
+    total: mediaItems.length,
+    images: mediaItems.filter(item => item.kind === 'image').length,
+    pdfs: mediaItems.filter(item => item.kind === 'pdf').length
+  }), [mediaItems]);
 
-  const updateCreateAsset = (index, patch) => {
-    setCreateForm(current => ({
-      ...current,
-      assets: current.assets.map((asset, assetIndex) => (assetIndex === index ? { ...asset, ...patch } : asset))
-    }));
-  };
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedSlug) return;
 
-  const addCreateAsset = () => {
-    setCreateForm(current => ({
-      ...current,
-      assets: [...current.assets, blankAsset(current.assets.length)]
-    }));
-  };
-
-  const removeCreateAsset = index => {
-    setCreateForm(current => ({
-      ...current,
-      assets: current.assets.filter((_, assetIndex) => assetIndex !== index)
-    }));
-  };
-
-  const updateItemState = (itemId, patch) => {
-    setItemStates(current => ({
-      ...current,
-      [itemId]: {
-        ...(current[itemId] || {}),
-        ...patch
-      }
-    }));
-  };
-
-  const updateItemAsset = (itemId, index, patch) => {
-    updateItemState(itemId, {
-      assets: (itemStates[itemId]?.assets || []).map((asset, assetIndex) => (assetIndex === index ? { ...asset, ...patch } : asset)),
-      saved: false
-    });
-  };
-
-  const addItemAsset = itemId => {
-    updateItemState(itemId, {
-      assets: [...(itemStates[itemId]?.assets || []), blankAsset((itemStates[itemId]?.assets || []).length)],
-      saved: false
-    });
-  };
-
-  const removeItemAsset = (itemId, index) => {
-    updateItemState(itemId, {
-      assets: (itemStates[itemId]?.assets || []).filter((_, assetIndex) => assetIndex !== index),
-      saved: false
-    });
-  };
-
-  const reloadItems = async slug => {
-    const response = await fetch(`/api/admin/profiles/${slug}/portfolio`);
-    const payload = response.ok ? await response.json() : { items: [] };
-    const nextItems = payload.items || [];
-    setItems(nextItems);
-    setItemStates(buildItemStates(nextItems));
-  };
-
-  const handleCreate = async () => {
-    if (!selectedSlug) return;
-
-    setCreateState('saving');
+    setUploadState('uploading');
     setError('');
 
     try {
-      const response = await fetch(`/api/admin/profiles/${selectedSlug}/portfolio`, {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch(`/api/admin/profiles/${selectedSlug}/media`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(portfolioFormToPayload(createForm))
+        body: formData
       });
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || 'Unable to create portfolio item.');
+        throw new Error(payload.error || 'Unable to upload media file.');
       }
 
-      await reloadItems(selectedSlug);
-      setCreateForm(emptyCreateForm());
-      setCreateState('saved');
-    } catch (createError) {
-      setError(createError.message);
-      setCreateState('error');
+      setMediaItems(current => [payload.item, ...current]);
+      setSelectedFile(null);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = '';
+      }
+      setUploadState('uploaded');
+    } catch (uploadError) {
+      setError(uploadError.message);
+      setUploadState('error');
     }
   };
 
-  const handleSave = async item => {
-    const state = itemStates[item.id];
-    if (!state) return;
-
-    updateItemState(item.id, { saving: true, saved: false, error: '' });
-
+  const handleCopyPath = async publicPath => {
     try {
-      const response = await fetch(`/api/admin/profiles/${selectedSlug}/portfolio/${item.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(portfolioFormToPayload(state))
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || 'Unable to save portfolio item.');
-      }
-
-      const nextItems = items.map(entry => (entry.id === item.id ? payload.item : entry));
-      const nextStates = buildItemStates(nextItems);
-      nextStates[item.id] = {
-        ...nextStates[item.id],
-        saved: true
-      };
-      setItems(nextItems);
-      setItemStates(nextStates);
-    } catch (saveError) {
-      updateItemState(item.id, { saving: false, saved: false, error: saveError.message });
+      await navigator.clipboard.writeText(publicPath);
+      setCopiedPath(publicPath);
+      window.setTimeout(() => setCopiedPath(''), 1800);
+    } catch {
+      setCopiedPath('');
     }
   };
 
-  const handleDelete = async item => {
-    const confirmed = window.confirm(`Delete portfolio item "${item.title}"?`);
+  const handleDeleteMedia = async mediaItem => {
+    const confirmed = window.confirm(`Delete media asset "${mediaItem.originalName}"?`);
     if (!confirmed) return;
 
-    updateItemState(item.id, { deleting: true, error: '', saved: false });
+    setMediaActionId(mediaItem.id);
+    setError('');
 
     try {
-      const response = await fetch(`/api/admin/profiles/${selectedSlug}/portfolio/${item.id}`, {
+      const response = await fetch(`/api/admin/profiles/${selectedSlug}/media/${mediaItem.id}`, {
         method: 'DELETE'
       });
 
       if (!response.ok && response.status !== 204) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Unable to delete portfolio item.');
+        throw new Error(payload.error || 'Unable to delete media asset.');
       }
 
-      const nextItems = items.filter(entry => entry.id !== item.id);
-      setItems(nextItems);
-      setItemStates(buildItemStates(nextItems));
+      setMediaItems(current => current.filter(item => item.id !== mediaItem.id));
+      if (copiedPath === mediaItem.publicPath) {
+        setCopiedPath('');
+      }
     } catch (deleteError) {
-      updateItemState(item.id, { deleting: false, error: deleteError.message });
+      setError(deleteError.message);
+    } finally {
+      setMediaActionId(null);
+    }
+  };
+
+  const handleReplaceMedia = async (mediaItem, file) => {
+    if (!file) return;
+
+    setMediaActionId(mediaItem.id);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/profiles/${selectedSlug}/media/${mediaItem.id}/replace`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to replace media asset.');
+      }
+
+      setMediaItems(current => current.map(item => (item.id === mediaItem.id ? payload.item : item)));
+      if (copiedPath === mediaItem.publicPath) {
+        setCopiedPath(payload.item.publicPath);
+      }
+    } catch (replaceError) {
+      setError(replaceError.message);
+    } finally {
+      setMediaActionId(null);
     }
   };
 
   return (
     <>
-      <PageHeader eyebrow="Portfolio" title="Portfolio management">
+      <PageHeader eyebrow="Media" title="Media library">
         <p>
           {canManage
-            ? 'Create public work samples, project highlights, and supporting links for each household profile.'
+            ? 'Upload reusable project images, PDFs, and profile assets for each household profile. Portfolio cards stay in the editor, while file management lives here.'
             : authState.dataSource !== 'database'
-              ? 'Switch to database mode to manage portfolio items from the CMS.'
+              ? 'Switch to database mode to manage uploaded media from the CMS.'
               : authState.user
-                ? 'This account does not currently have portfolio editing access.'
-                : 'Sign in with an editor, admin, or owner account to manage portfolio items.'}
+                ? 'This account does not currently have media library access.'
+                : 'Sign in with an editor, admin, or owner account to manage uploaded media.'}
         </p>
       </PageHeader>
 
       {error ? (
         <Alert status="danger">
           <Alert.Content>
-            <Alert.Title>Portfolio management error</Alert.Title>
+            <Alert.Title>Media library error</Alert.Title>
             <Alert.Description>{error}</Alert.Description>
           </Alert.Content>
         </Alert>
@@ -433,12 +285,12 @@ export function PortfolioAdmin({ authState }) {
       {!canManage ? null : (
         <>
           <section className="members-layout">
-            <Card className="form-panel members-create-panel">
+            <Card className="form-panel members-create-panel media-library-panel">
               <Card.Content className="form-stack">
                 <div>
-                  <p className="card-label">Create Portfolio Item</p>
-                  <h2>Add a public work sample</h2>
-                  <p className="field-help">Focus on project proof: a clear title, short summary, description, photos, and links. The rest is optional.</p>
+                  <p className="card-label">Upload Media</p>
+                  <h2>Build the reusable asset library</h2>
+                  <p className="field-help">Upload images and PDFs once, then copy their saved path into portfolio cards or use them for profile photos.</p>
                 </div>
 
                 <div className="form-grid two">
@@ -448,81 +300,38 @@ export function PortfolioAdmin({ authState }) {
                       {editableProfiles.map(profile => <option key={profile.slug} value={profile.slug}>{profile.name}</option>)}
                     </select>
                   </label>
-                  <TextField>
-                    <Label>Title</Label>
-                    <Input
-                      value={createForm.title}
-                      onChange={event => updateCreateForm({
-                        title: event.target.value,
-                        slug: createForm.slug ? createForm.slug : normalizeSlug(event.target.value)
-                      })}
+                  <label className="form-panel">
+                    <span>Choose File</span>
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={event => setSelectedFile(event.target.files?.[0] || null)}
                     />
-                  </TextField>
-                  <TextField>
-                    <Label>Summary</Label>
-                    <Input value={createForm.summary} onChange={event => updateCreateForm({ summary: event.target.value })} />
-                  </TextField>
-                  <label className="select-field">
-                    <span>Visibility</span>
-                    <select value={createForm.visibility} onChange={event => updateCreateForm({ visibility: event.target.value })}>
-                      <option value="private">Private</option>
-                      <option value="shared">Shared</option>
-                      <option value="public">Public</option>
-                    </select>
                   </label>
                 </div>
 
-                <TextField>
-                  <Label>Description</Label>
-                  <TextArea rows={5} value={createForm.description} onChange={event => updateCreateForm({ description: event.target.value })} />
-                </TextField>
-
-                <label className="portfolio-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={createForm.featured}
-                    onChange={event => updateCreateForm({ featured: event.target.checked })}
-                  />
-                  <span>Feature this portfolio item</span>
-                </label>
-
-                <PortfolioAdvancedFields form={createForm} onPatch={updateCreateForm} />
-
-                <div className="portfolio-assets-block">
-                  <div className="assignment-header">
-                    <strong>Assets</strong>
-                    <span>{createForm.assets.length} item{createForm.assets.length === 1 ? '' : 's'}</span>
-                  </div>
-                  <p className="field-help">Add project photos, public links, and supporting PDFs. Image assets will display directly on the public profile.</p>
-                  <div className="portfolio-assets-list">
-                    {createForm.assets.map((asset, index) => (
-                      <PortfolioAssetFields
-                        key={`create-asset-${index}`}
-                        asset={asset}
-                        index={index}
-                        onChange={patch => updateCreateAsset(index, patch)}
-                        onRemove={() => removeCreateAsset(index)}
-                      />
-                    ))}
-                  </div>
-                  <Button type="button" variant="bordered" onPress={addCreateAsset}>
-                    <Plus size={16} />
-                    <span>Add Asset</span>
-                  </Button>
+                <div className="media-library-panel__upload-meta">
+                  <p>{selectedFile ? selectedFile.name : 'No file selected yet.'}</p>
+                  <p className="field-help">Supported: images and PDFs up to 8MB.</p>
                 </div>
 
                 <div className="toolbar">
-                  <Button type="button" onPress={handleCreate} isDisabled={createState === 'saving' || !selectedSlug}>
-                    <Plus size={16} />
-                    <span>{createState === 'saving' ? 'Creating...' : 'Create Portfolio Item'}</span>
+                  <Button type="button" onPress={handleUpload} isDisabled={!selectedFile || uploadState === 'uploading' || !selectedSlug}>
+                    <ImagePlus size={16} />
+                    <span>{uploadState === 'uploading' ? 'Uploading...' : 'Upload to Library'}</span>
                   </Button>
+                  <a className="hero-link-button" href="/editor">
+                    <ExternalLink size={16} />
+                    <span>Open Editor</span>
+                  </a>
                   {selectedProfile ? (
-                    <a className="hero-link-button" href={selectedProfile.profileLink || `/profile/${selectedProfile.slug}`}>
-                      <Eye size={16} />
+                    <a className="hero-link-button" href={publicProfileLink}>
+                      <ExternalLink size={16} />
                       <span>Public Profile Preview</span>
                     </a>
                   ) : null}
-                  {createState === 'saved' ? <p className="editor-success">Portfolio item created.</p> : null}
+                  {uploadState === 'uploaded' ? <p className="editor-success">File uploaded to the media library.</p> : null}
                 </div>
               </Card.Content>
             </Card>
@@ -530,152 +339,59 @@ export function PortfolioAdmin({ authState }) {
             <Card className="members-summary-card">
               <Card.Content className="form-stack">
                 <div>
-                  <p className="card-label">Portfolio Summary</p>
-                  <h2>{items.length} item{items.length === 1 ? '' : 's'}</h2>
-                  <p className="field-help">Public profile hubs can now surface project highlights, links, and supporting assets.</p>
+                  <p className="card-label">Library Summary</p>
+                  <h2>{counts.total} asset{counts.total === 1 ? '' : 's'}</h2>
+                  <p className="field-help">Use the copied path inside portfolio project assets, or select uploaded images in the profile photo library.</p>
                 </div>
                 <dl className="snapshot-list compact">
                   <div>
-                    <dt>Public</dt>
-                    <dd>{items.filter(item => item.visibility === 'public').length}</dd>
+                    <dt>Images</dt>
+                    <dd>{counts.images}</dd>
                   </div>
                   <div>
-                    <dt>Featured</dt>
-                    <dd>{items.filter(item => item.featured).length}</dd>
+                    <dt>PDFs</dt>
+                    <dd>{counts.pdfs}</dd>
                   </div>
                   <div>
-                    <dt>Assets</dt>
-                    <dd>{items.reduce((total, item) => total + (item.assets?.length || 0), 0)}</dd>
+                    <dt>Profile</dt>
+                    <dd>{selectedProfile?.name || '-'}</dd>
                   </div>
                 </dl>
+                {copiedPath ? <p className="field-help">Copied path: {copiedPath}</p> : null}
               </Card.Content>
             </Card>
           </section>
 
-          <section className="profiles-admin-grid portfolio-admin-grid" aria-label="Portfolio items">
+          <section className="profiles-admin-grid media-library-admin-grid" aria-label="Media library items">
             {status === 'loading' ? (
               <div className="loading-row">
                 <Spinner size="sm" />
-                <p>Loading portfolio items...</p>
+                <p>Loading media library...</p>
               </div>
             ) : null}
 
-            {status === 'ready' && items.length === 0 ? (
+            {status === 'ready' && mediaItems.length === 0 ? (
               <Card className="profile-card member-card portfolio-empty-card">
                 <Card.Content className="profile-card-content form-stack">
                   <div>
-                    <p className="card-label">No Items Yet</p>
-                    <h2>Start the portfolio</h2>
-                    <p>Create the first public work sample for this profile using the form above.</p>
+                    <p className="card-label">No Media Yet</p>
+                    <h2>Start the library</h2>
+                    <p>Upload the first image or PDF for this profile using the form above.</p>
                   </div>
                 </Card.Content>
               </Card>
             ) : null}
 
-            {items.map(item => {
-              const state = itemStates[item.id];
-              if (!state) return null;
-
-              return (
-                <Card className="profile-card member-card" key={item.id}>
-                  <Card.Content className="profile-card-content form-stack">
-                    <div>
-                      <p className="card-label">{state.visibility}</p>
-                      <h2>{item.title}</h2>
-                      <p>{item.category || 'Portfolio item'}</p>
-                    </div>
-
-                    <div className="form-grid two">
-                      <TextField>
-                        <Label>Title</Label>
-                        <Input
-                          value={state.title}
-                          onChange={event => updateItemState(item.id, {
-                            title: event.target.value,
-                            slug: state.slug ? state.slug : normalizeSlug(event.target.value),
-                            saved: false
-                          })}
-                        />
-                      </TextField>
-                      <label className="select-field">
-                        <span>Visibility</span>
-                        <select
-                          value={state.visibility}
-                          onChange={event => updateItemState(item.id, { visibility: event.target.value, saved: false })}
-                        >
-                          <option value="private">Private</option>
-                          <option value="shared">Shared</option>
-                          <option value="public">Public</option>
-                        </select>
-                      </label>
-                      <TextField>
-                        <Label>Summary</Label>
-                        <Input
-                          value={state.summary}
-                          onChange={event => updateItemState(item.id, { summary: event.target.value, saved: false })}
-                        />
-                      </TextField>
-                    </div>
-
-                    <TextField>
-                      <Label>Description</Label>
-                      <TextArea rows={5} value={state.description} onChange={event => updateItemState(item.id, { description: event.target.value, saved: false })} />
-                    </TextField>
-
-                    <label className="portfolio-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={state.featured}
-                        onChange={event => updateItemState(item.id, { featured: event.target.checked, saved: false })}
-                      />
-                      <span>Feature this portfolio item</span>
-                    </label>
-
-                    <PortfolioAdvancedFields
-                      form={state}
-                      onPatch={patch => updateItemState(item.id, { ...patch, saved: false })}
-                    />
-
-                    <div className="portfolio-assets-block">
-                      <div className="assignment-header">
-                        <strong>Assets</strong>
-                        <span>{state.assets.length} item{state.assets.length === 1 ? '' : 's'}</span>
-                      </div>
-                      <p className="field-help">Add project photos, public links, and supporting PDFs. Image assets will display directly on the public profile.</p>
-                      <div className="portfolio-assets-list">
-                        {state.assets.map((asset, index) => (
-                          <PortfolioAssetFields
-                            key={`${item.id}-asset-${index}`}
-                            asset={asset}
-                            index={index}
-                            onChange={patch => updateItemAsset(item.id, index, patch)}
-                            onRemove={() => removeItemAsset(item.id, index)}
-                          />
-                        ))}
-                      </div>
-                      <Button type="button" variant="bordered" onPress={() => addItemAsset(item.id)}>
-                        <Plus size={16} />
-                        <span>Add Asset</span>
-                      </Button>
-                    </div>
-
-                    {state.saved ? <p className="editor-success">Portfolio item saved.</p> : null}
-                    {state.error ? <p className="editor-error">{state.error}</p> : null}
-
-                    <div className="toolbar">
-                      <Button type="button" onPress={() => handleSave(item)} isDisabled={state.saving || state.deleting}>
-                        <Save size={16} />
-                        <span>{state.saving ? 'Saving...' : 'Save Item'}</span>
-                      </Button>
-                      <Button type="button" variant="bordered" onPress={() => handleDelete(item)} isDisabled={state.saving || state.deleting}>
-                        <Trash2 size={16} />
-                        <span>{state.deleting ? 'Deleting...' : 'Delete Item'}</span>
-                      </Button>
-                    </div>
-                  </Card.Content>
-                </Card>
-              );
-            })}
+            {mediaItems.map(item => (
+              <MediaLibraryCard
+                key={item.id}
+                item={item}
+                isWorking={mediaActionId === item.id}
+                onCopy={handleCopyPath}
+                onReplace={handleReplaceMedia}
+                onDelete={handleDeleteMedia}
+              />
+            ))}
           </section>
         </>
       )}
