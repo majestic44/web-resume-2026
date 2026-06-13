@@ -9,7 +9,13 @@ function emptyCreateForm() {
     displayName: '',
     slug: '',
     headline: '',
-    template: 'modern'
+    template: 'modern',
+    sectionVisibility: {
+      documents: true,
+      portfolio: true,
+      certifications: false,
+      references: false
+    }
   };
 }
 
@@ -33,6 +39,12 @@ function buildProfileStates(profiles) {
       slug: profile.slug,
       headline: profile.headline || '',
       template: profile.template || 'modern',
+      sectionVisibility: {
+        documents: profile.sectionVisibility?.documents !== false,
+        portfolio: profile.sectionVisibility?.portfolio !== false,
+        certifications: Boolean(profile.sectionVisibility?.certifications),
+        references: Boolean(profile.sectionVisibility?.references)
+      },
       status: profile.status || 'active',
       saving: false,
       saved: false,
@@ -40,6 +52,17 @@ function buildProfileStates(profiles) {
     };
     return map;
   }, {});
+}
+
+function enabledSectionLabels(sectionVisibility) {
+  const sections = [
+    sectionVisibility?.documents ? 'Documents' : null,
+    sectionVisibility?.portfolio ? 'Portfolio' : null,
+    sectionVisibility?.certifications ? 'Certifications' : null,
+    sectionVisibility?.references ? 'References' : null
+  ];
+
+  return sections.filter(Boolean);
 }
 
 export function ProfilesAdmin({ authState }) {
@@ -92,6 +115,27 @@ export function ProfilesAdmin({ authState }) {
     }));
   };
 
+  const updateCreateSectionVisibility = (key, checked) => {
+    setCreateForm(current => ({
+      ...current,
+      sectionVisibility: {
+        ...current.sectionVisibility,
+        [key]: checked
+      }
+    }));
+  };
+
+  const updateProfileSectionVisibility = (profileId, key, checked) => {
+    const currentVisibility = profileStates[profileId]?.sectionVisibility || {};
+    updateProfileState(profileId, {
+      sectionVisibility: {
+        ...currentVisibility,
+        [key]: checked
+      },
+      saved: false
+    });
+  };
+
   const handleCreate = async () => {
     setCreateState('saving');
     setError('');
@@ -134,7 +178,8 @@ export function ProfilesAdmin({ authState }) {
           slug: profileState.slug,
           headline: profileState.headline,
           template: profileState.template,
-          status: profileState.status
+          status: profileState.status,
+          sectionVisibility: profileState.sectionVisibility
         })
       });
 
@@ -219,6 +264,43 @@ export function ProfilesAdmin({ authState }) {
                     </select>
                   </label>
                 </div>
+                <div className="profile-section-visibility">
+                  <p className="field-help">Choose which public sections appear on the profile page for this person.</p>
+                  <div className="profile-section-visibility__grid">
+                    <label className="profile-section-toggle">
+                      <input
+                        type="checkbox"
+                        checked={createForm.sectionVisibility.documents}
+                        onChange={event => updateCreateSectionVisibility('documents', event.target.checked)}
+                      />
+                      <span>Documents</span>
+                    </label>
+                    <label className="profile-section-toggle">
+                      <input
+                        type="checkbox"
+                        checked={createForm.sectionVisibility.portfolio}
+                        onChange={event => updateCreateSectionVisibility('portfolio', event.target.checked)}
+                      />
+                      <span>Portfolio</span>
+                    </label>
+                    <label className="profile-section-toggle">
+                      <input
+                        type="checkbox"
+                        checked={createForm.sectionVisibility.certifications}
+                        onChange={event => updateCreateSectionVisibility('certifications', event.target.checked)}
+                      />
+                      <span>Certifications & Licenses</span>
+                    </label>
+                    <label className="profile-section-toggle">
+                      <input
+                        type="checkbox"
+                        checked={createForm.sectionVisibility.references}
+                        onChange={event => updateCreateSectionVisibility('references', event.target.checked)}
+                      />
+                      <span>References</span>
+                    </label>
+                  </div>
+                </div>
                 <div className="toolbar">
                   <Button type="button" onPress={handleCreate} isDisabled={createState === 'saving'}>
                     <Plus size={16} />
@@ -234,7 +316,7 @@ export function ProfilesAdmin({ authState }) {
                 <div>
                   <p className="card-label">Profile Summary</p>
                   <h2>{profiles.length} profile{profiles.length === 1 ? '' : 's'}</h2>
-                  <p className="field-help">Each active profile gets a public resume page, cover letter page, and editable draft workflow.</p>
+                  <p className="field-help">Each active profile gets a public resume page, cover letter page, editable draft workflow, and configurable public profile sections.</p>
                 </div>
               </Card.Content>
             </Card>
@@ -259,6 +341,11 @@ export function ProfilesAdmin({ authState }) {
                       <p className="card-label">{profile.slug}</p>
                       <h2>{profile.displayName}</h2>
                       <p>{profile.headline}</p>
+                      <div className="profile-section-chip-row">
+                        {enabledSectionLabels(profileState.sectionVisibility).map(label => (
+                          <span key={label} className="profile-section-chip">{label}</span>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="form-grid two">
@@ -292,6 +379,44 @@ export function ProfilesAdmin({ authState }) {
                           {templateOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
                         </select>
                       </label>
+                    </div>
+
+                    <div className="profile-section-visibility">
+                      <p className="field-help">Public profile sections for this profile.</p>
+                      <div className="profile-section-visibility__grid">
+                        <label className="profile-section-toggle">
+                          <input
+                            type="checkbox"
+                            checked={profileState.sectionVisibility.documents}
+                            onChange={event => updateProfileSectionVisibility(profile.id, 'documents', event.target.checked)}
+                          />
+                          <span>Documents</span>
+                        </label>
+                        <label className="profile-section-toggle">
+                          <input
+                            type="checkbox"
+                            checked={profileState.sectionVisibility.portfolio}
+                            onChange={event => updateProfileSectionVisibility(profile.id, 'portfolio', event.target.checked)}
+                          />
+                          <span>Portfolio</span>
+                        </label>
+                        <label className="profile-section-toggle">
+                          <input
+                            type="checkbox"
+                            checked={profileState.sectionVisibility.certifications}
+                            onChange={event => updateProfileSectionVisibility(profile.id, 'certifications', event.target.checked)}
+                          />
+                          <span>Certifications & Licenses</span>
+                        </label>
+                        <label className="profile-section-toggle">
+                          <input
+                            type="checkbox"
+                            checked={profileState.sectionVisibility.references}
+                            onChange={event => updateProfileSectionVisibility(profile.id, 'references', event.target.checked)}
+                          />
+                          <span>References</span>
+                        </label>
+                      </div>
                     </div>
 
                     {profileState.saved ? <p className="editor-success">Profile details saved.</p> : null}

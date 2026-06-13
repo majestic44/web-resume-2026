@@ -11,9 +11,45 @@ function defaultSectionTitles() {
   };
 }
 
+function defaultSectionVisibility() {
+  return {
+    documents: true,
+    portfolio: true,
+    certifications: false,
+    references: false
+  };
+}
+
 function normalizeTemplate(template) {
   const value = String(template || 'modern').trim().toLowerCase();
   return value || 'modern';
+}
+
+function normalizeBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1' || value === 'true' || value === 'on') return true;
+  if (value === 0 || value === '0' || value === 'false' || value === 'off') return false;
+  return fallback;
+}
+
+function normalizeSectionVisibility(input = {}) {
+  const defaults = defaultSectionVisibility();
+
+  return {
+    documents: normalizeBoolean(input.documents, defaults.documents),
+    portfolio: normalizeBoolean(input.portfolio, defaults.portfolio),
+    certifications: normalizeBoolean(input.certifications, defaults.certifications),
+    references: normalizeBoolean(input.references, defaults.references)
+  };
+}
+
+function sectionVisibilityFromRow(row) {
+  return normalizeSectionVisibility({
+    documents: row.show_documents,
+    portfolio: row.show_portfolio,
+    certifications: row.show_certifications,
+    references: row.show_references
+  });
 }
 
 export function normalizeProfileSlug(value) {
@@ -85,6 +121,7 @@ function sanitizeManagedProfile(row) {
     displayName: row.display_name,
     headline: row.headline || '',
     template: row.template || 'modern',
+    sectionVisibility: sectionVisibilityFromRow(row),
     status: row.status,
     updatedAt: row.updated_at
   };
@@ -110,7 +147,9 @@ export async function listManagedProfiles() {
   const pool = getDatabasePool();
   const [rows] = await pool.query(
     `
-      SELECT p.id, p.slug, p.display_name, p.headline, p.status, p.updated_at, d.template
+      SELECT p.id, p.slug, p.display_name, p.headline, p.status, p.updated_at,
+             p.show_documents, p.show_portfolio, p.show_certifications, p.show_references,
+             d.template
       FROM profiles p
       LEFT JOIN documents d
         ON d.profile_id = p.id
@@ -123,9 +162,10 @@ export async function listManagedProfiles() {
   return rows.map(sanitizeManagedProfile);
 }
 
-export async function createProfile({ displayName, slug, headline, template = 'modern' }, actorUserId = null) {
+export async function createProfile({ displayName, slug, headline, template = 'modern', sectionVisibility }, actorUserId = null) {
   const values = validateProfileInput({ displayName, slug, headline });
   const nextTemplate = normalizeTemplate(template);
+  const nextSectionVisibility = normalizeSectionVisibility(sectionVisibility);
   const pool = getDatabasePool();
   const connection = await pool.getConnection();
 
@@ -134,10 +174,24 @@ export async function createProfile({ displayName, slug, headline, template = 'm
 
     const [profileResult] = await connection.query(
       `
-        INSERT INTO profiles (slug, display_name, headline, status, created_by, updated_by)
-        VALUES (?, ?, ?, 'active', ?, ?)
+        INSERT INTO profiles (
+          slug, display_name, headline, status,
+          show_documents, show_portfolio, show_certifications, show_references,
+          created_by, updated_by
+        )
+        VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
       `,
-      [values.slug, values.displayName, values.headline, actorUserId, actorUserId]
+      [
+        values.slug,
+        values.displayName,
+        values.headline,
+        nextSectionVisibility.documents ? 1 : 0,
+        nextSectionVisibility.portfolio ? 1 : 0,
+        nextSectionVisibility.certifications ? 1 : 0,
+        nextSectionVisibility.references ? 1 : 0,
+        actorUserId,
+        actorUserId
+      ]
     );
 
     const profileId = profileResult.insertId;
@@ -177,7 +231,7 @@ export async function createProfile({ displayName, slug, headline, template = 'm
   }
 }
 
-export async function updateProfile(profileId, { displayName, slug, headline, template, status }, actorUserId = null) {
+export async function updateProfile(profileId, { displayName, slug, headline, template, status, sectionVisibility }, actorUserId = null) {
   const nextProfileId = Number(profileId);
   if (!Number.isInteger(nextProfileId) || nextProfileId <= 0) {
     throw new Error('A valid profile id is required.');
@@ -186,6 +240,7 @@ export async function updateProfile(profileId, { displayName, slug, headline, te
   const nextTemplate = normalizeTemplate(template);
   const nextStatus = ['active', 'archived'].includes(status) ? status : 'active';
   const values = validateProfileInput({ displayName, slug, headline });
+  const nextSectionVisibility = normalizeSectionVisibility(sectionVisibility);
   const pool = getDatabasePool();
   const connection = await pool.getConnection();
 
@@ -205,10 +260,23 @@ export async function updateProfile(profileId, { displayName, slug, headline, te
     await connection.query(
       `
         UPDATE profiles
-        SET slug = ?, display_name = ?, headline = ?, status = ?, updated_by = ?, updated_at = NOW()
+        SET slug = ?, display_name = ?, headline = ?, status = ?,
+            show_documents = ?, show_portfolio = ?, show_certifications = ?, show_references = ?,
+            updated_by = ?, updated_at = NOW()
         WHERE id = ?
       `,
-      [values.slug, values.displayName, values.headline, nextStatus, actorUserId, nextProfileId]
+      [
+        values.slug,
+        values.displayName,
+        values.headline,
+        nextStatus,
+        nextSectionVisibility.documents ? 1 : 0,
+        nextSectionVisibility.portfolio ? 1 : 0,
+        nextSectionVisibility.certifications ? 1 : 0,
+        nextSectionVisibility.references ? 1 : 0,
+        actorUserId,
+        nextProfileId
+      ]
     );
 
     const [documents] = await connection.query(

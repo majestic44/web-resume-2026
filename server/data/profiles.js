@@ -4,6 +4,12 @@ export const profiles = {
     name: 'Jareth Thomas',
     label: 'Operations & Logistics',
     template: 'modern',
+    sectionVisibility: {
+      documents: true,
+      portfolio: true,
+      certifications: false,
+      references: false
+    },
     seedFile: 'jareth-resume.json',
     profileLink: '/profile/jareth',
     resumeLink: '/resume/jareth',
@@ -14,6 +20,12 @@ export const profiles = {
     name: 'Angel Cunningham',
     label: 'Professional Profile',
     template: 'classic',
+    sectionVisibility: {
+      documents: true,
+      portfolio: true,
+      certifications: false,
+      references: false
+    },
     seedFile: 'angel-resume.json',
     profileLink: '/profile/angel',
     resumeLink: '/resume/angel',

@@ -145,7 +145,7 @@ async function readSeedPortfolioCollection(profileSlug) {
 async function findActiveProfileBySlug(connectionOrPool, profileSlug) {
   const [rows] = await connectionOrPool.query(
     `
-      SELECT id, slug, display_name, headline
+      SELECT id, slug, display_name, headline, show_documents, show_portfolio, show_certifications, show_references
       FROM profiles
       WHERE slug = ?
         AND status = 'active'
@@ -155,6 +155,25 @@ async function findActiveProfileBySlug(connectionOrPool, profileSlug) {
   );
 
   return rows[0] || null;
+}
+
+function profileSectionVisibility(profileSlug, profileRow = null) {
+  if (profileRow) {
+    return {
+      documents: Boolean(profileRow.show_documents),
+      portfolio: Boolean(profileRow.show_portfolio),
+      certifications: Boolean(profileRow.show_certifications),
+      references: Boolean(profileRow.show_references)
+    };
+  }
+
+  const seedProfile = profiles[profileSlug];
+  return {
+    documents: seedProfile?.sectionVisibility?.documents !== false,
+    portfolio: seedProfile?.sectionVisibility?.portfolio !== false,
+    certifications: Boolean(seedProfile?.sectionVisibility?.certifications),
+    references: Boolean(seedProfile?.sectionVisibility?.references)
+  };
 }
 
 async function loadDatabasePortfolioItems(connectionOrPool, profileId, { publicOnly = false } = {}) {
@@ -191,7 +210,7 @@ async function loadDatabasePortfolioItems(connectionOrPool, profileId, { publicO
   return itemRows.map(row => sanitizePortfolioItem(row, assetsByItemId.get(row.id) || []));
 }
 
-function buildPublicProfilePayload(resumeDocument, portfolioItems) {
+function buildPublicProfilePayload(resumeDocument, portfolioItems, sectionVisibility) {
   if (!resumeDocument) return null;
 
   return {
@@ -202,6 +221,7 @@ function buildPublicProfilePayload(resumeDocument, portfolioItems) {
       headline: resumeDocument.content?.title || resumeDocument.meta.label || 'Professional Profile',
       summary: resumeDocument.content?.summary || '',
       image: resumeDocument.content?.image || resumeDocument.content?.images?.profile || '',
+      sectionVisibility,
       profileLink: profiles[resumeDocument.meta.slug]?.profileLink || `/profile/${resumeDocument.meta.slug}`,
       resumeLink: resumeDocument.meta.resumeLink || `/resume/${resumeDocument.meta.slug}`,
       coverLetterLink: resumeDocument.meta.coverLetterLink || `/cover-letter/${resumeDocument.meta.slug}`
@@ -273,12 +293,23 @@ export async function listPublicPortfolio(profileSlug) {
 }
 
 export async function readPublicProfile(profileSlug) {
+  if (!isDatabaseEnabled()) {
+    const [resumeDocument, portfolioItems] = await Promise.all([
+      readDocument('resume', profileSlug),
+      listPublicPortfolio(profileSlug)
+    ]);
+
+    return buildPublicProfilePayload(resumeDocument, portfolioItems, profileSectionVisibility(profileSlug));
+  }
+
+  const pool = getDatabasePool();
+  const profile = await findActiveProfileBySlug(pool, profileSlug);
   const [resumeDocument, portfolioItems] = await Promise.all([
     readDocument('resume', profileSlug),
-    listPublicPortfolio(profileSlug)
+    profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : []
   ]);
 
-  return buildPublicProfilePayload(resumeDocument, portfolioItems);
+  return buildPublicProfilePayload(resumeDocument, portfolioItems, profileSectionVisibility(profileSlug, profile));
 }
 
 export async function listManagedPortfolio(profileSlug) {

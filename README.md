@@ -40,7 +40,7 @@ Useful routes:
 - `/login` - sign in
 - `/dashboard` - admin dashboard
 - `/editor` - resume draft editor
-- `/portfolio` - portfolio manager
+- `/portfolio` - dedicated media library
 - `/profiles` - owner/admin profile management
 - `/members` - owner/admin access management
 - `/templates` - template registry
@@ -145,10 +145,16 @@ Owner/admin accounts can manage profiles from `/profiles`.
   - slug
   - headline
   - template
+  - public section visibility toggles for:
+    - documents
+    - portfolio
+    - certifications and licenses
+    - references
 - Each new profile automatically creates:
   - a default resume document
   - a default cover letter document
 - Profile updates also keep the linked resume/cover letter template metadata in sync
+- Profile updates can also control which sections appear on the public profile hub
 
 New profiles show up in:
 
@@ -157,7 +163,7 @@ New profiles show up in:
 - the editor profile selector
 - the member access assignment screen
 
-## Portfolio Phase 1
+## Public Profile + Portfolio
 
 The first portfolio foundation is now in place.
 
@@ -166,20 +172,28 @@ The first portfolio foundation is now in place.
   - profile photo
   - headline
   - summary
-  - resume link
-  - cover letter link
+  - resume and cover letter document cards
   - public portfolio items
+  - optional certifications/licenses placeholder section
+  - optional references placeholder section
+- Portfolio cards on the public profile page now support:
+  - tag filtering
+  - project-type filtering
+  - progress filtering
+  - richer project link presentation
+  - larger image popout/lightbox behavior
 - Portfolio seed files currently exist for:
   - `server/data/seeds/jareth-portfolio.json`
   - `server/data/seeds/angel-portfolio.json`
-- A portfolio admin page now exists at `/portfolio`
+- A dedicated media library page now exists at `/portfolio`
 - Admin CRUD API routes are available for database mode:
   - `GET /api/admin/profiles/:slug/portfolio`
   - `POST /api/admin/profiles/:slug/portfolio`
   - `PATCH /api/admin/profiles/:slug/portfolio/:itemId`
   - `DELETE /api/admin/profiles/:slug/portfolio/:itemId`
 
-Portfolio editing from `/portfolio` requires `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
+Portfolio editing from `/editor` requires `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
+Media uploads from `/portfolio` require `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
 
 ## Member Access
 
@@ -206,6 +220,12 @@ Recommended setup:
 8. Run `npm run db:seed`.
 9. Set `DATA_SOURCE=database`.
 10. Run `npm run build` so Express can serve the React app from `dist/client`.
+
+Recent migrations to make sure are applied before testing newer profile/portfolio features:
+
+- `005_portfolio_project_meta.sql`
+- `006_media_assets.sql`
+- `007_profile_section_visibility.sql`
 
 ## PDF Export
 

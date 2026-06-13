@@ -1,6 +1,6 @@
 # Feature Checklist
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Completed
 
@@ -19,15 +19,19 @@ Last updated: 2026-06-12
 - [x] Profile image support on public directory/profile cards with initials fallback
 - [x] Portfolio schema scaffold
 - [x] Portfolio repository and API routes
-- [x] Portfolio admin page at `/portfolio` in database mode
+- [x] Dedicated media library page at `/portfolio` in database mode
 - [x] Portfolio management integrated into the editor workflow
 - [x] Public portfolio project cards with lead images, links, project type, and progress
 - [x] Portfolio tag support in editor/public card presentation
+- [x] Media library and upload workflow for profile photos, portfolio images, PDFs, and attachments
+- [x] Media file replace/delete handling with reference protection
+- [x] Profile section visibility controls for documents, portfolio, certifications, and references
+- [x] Public portfolio filtering and image popout viewer
 
 ## In Progress / Partial
 
 - [ ] Portfolio editor workflow QA
-  Status: portfolio now lives in the editor and public cards are rendering, but it still needs end-to-end testing with real database content and the new project metadata migration.
+  Status: portfolio now lives in the editor, the media library now lives on the dedicated Media page, and public cards are rendering. It still needs end-to-end testing with real database content and the latest migrations.
 
 - [ ] Portfolio seed-mode editing
   Status: public seed scaffolding exists, but portfolio editing is still database-only.
@@ -41,22 +45,22 @@ Last updated: 2026-06-12
 - [ ] Public/shared visibility tooling
   Status: database schema includes visibility concepts, but broader share-link management is not surfaced in the UI yet.
 
-- [ ] Portfolio uploads and reusable asset handling
-  Status: project cards support image/file paths and URLs, but there is not yet a media library or direct upload flow.
+- [ ] Certifications and licenses data model
+  Status: the public profile section can now be toggled on, but the underlying credential records and editing workflow are not built yet.
+
+- [ ] References data model
+  Status: the public profile section can now be toggled on, but structured reference records and editing workflow are not built yet.
 
 ## Next Planned Work
 
-- [ ] Media library and upload workflow
-  Goal: upload and reuse profile photos, portfolio images, PDFs, and attachments instead of relying only on paths/URLs.
-
-- [ ] Portfolio editor polishing
-  Goal: improve project-card editing layout, add better visual grouping, and reduce friction when managing several projects for one profile.
-
-- [ ] Public portfolio interaction improvements
-  Goal: support lightbox/gallery behavior, richer link presentation, and optional filtering by tag, type, or progress.
-
 - [ ] Database migration + regression verification
-  Goal: confirm migration `005_portfolio_project_meta.sql` is applied cleanly and verify editor/public profile behavior with real content.
+  Goal: confirm migrations `005_portfolio_project_meta.sql`, `006_media_assets.sql`, and `007_profile_section_visibility.sql` are applied cleanly and verify editor/public profile behavior with real content.
+
+- [ ] Document version history UI
+  Goal: surface saved versions more clearly and support comparing or restoring earlier document revisions.
+
+- [ ] Share-link and visibility management
+  Goal: expose controlled public/shareable links and visibility settings directly from the CMS.
 
 ## Planned Next Features
 
@@ -68,12 +72,6 @@ Last updated: 2026-06-12
 
 - [ ] Certifications and licenses
   Example fields: issuer, issued date, expiration date, credential ID, supporting link/file
-
-- [ ] Media library / reusable uploads
-  Goal: central place for profile photos, portfolio images, PDFs, and attachments
-
-- [ ] Portfolio asset uploads
-  Goal: upload files directly instead of only storing file paths or external URLs
 
 - [ ] Public share-link management
   Goal: create trackable public/shareable links from the CMS
@@ -96,7 +94,15 @@ Last updated: 2026-06-12
 - [ ] Confirm cover-letter editor still saves/publishes correctly
 - [ ] Confirm the editor document selector now includes `Portfolio`
 - [ ] Confirm portfolio CRUD works from `/editor` in database mode
+- [ ] Confirm media uploads work from `/portfolio` in database mode
+- [ ] Confirm uploaded media can be copied, replaced, and deleted safely
+- [ ] Confirm profile photo selection works with uploaded media
+- [ ] Confirm profile section visibility saves correctly from `/profiles`
+- [ ] Confirm documents can be hidden from `/profile/:slug`
+- [ ] Confirm portfolio can be hidden from `/profile/:slug`
+- [ ] Confirm certifications and references placeholders only appear when enabled
 - [ ] Confirm tags save and render correctly on public portfolio cards
+- [ ] Confirm portfolio image popout opens and closes correctly
 - [ ] Confirm project type and progress save correctly after migration `005_portfolio_project_meta.sql`
 - [ ] Confirm a public portfolio item appears on `/profile/:slug` with lead image, tags, links, and progress chips
 - [ ] Confirm no navigation regressions between directory, profile, resume, and cover letter pages

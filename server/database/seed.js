@@ -44,17 +44,28 @@ async function readSeedJson(seedFile) {
 async function upsertProfile(connection, seed) {
   await connection.query(
     `
-      INSERT INTO profiles (slug, display_name, headline, status)
-      VALUES (:slug, :displayName, :headline, 'active')
+      INSERT INTO profiles (
+        slug, display_name, headline, status,
+        show_documents, show_portfolio, show_certifications, show_references
+      )
+      VALUES (:slug, :displayName, :headline, 'active', :showDocuments, :showPortfolio, :showCertifications, :showReferences)
       ON DUPLICATE KEY UPDATE
         display_name = VALUES(display_name),
         headline = VALUES(headline),
+        show_documents = VALUES(show_documents),
+        show_portfolio = VALUES(show_portfolio),
+        show_certifications = VALUES(show_certifications),
+        show_references = VALUES(show_references),
         status = VALUES(status)
     `,
     {
       slug: seed.profile.slug,
       displayName: seed.profile.name,
-      headline: seed.headline
+      headline: seed.headline,
+      showDocuments: seed.profile.sectionVisibility?.documents ? 1 : 0,
+      showPortfolio: seed.profile.sectionVisibility?.portfolio !== false ? 1 : 0,
+      showCertifications: seed.profile.sectionVisibility?.certifications ? 1 : 0,
+      showReferences: seed.profile.sectionVisibility?.references ? 1 : 0
     }
   );
 

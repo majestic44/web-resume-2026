@@ -290,7 +290,8 @@ apiRouter.post('/admin/profiles', requireMemberManager, async (req, res, next) =
       displayName: req.body?.displayName,
       slug: req.body?.slug,
       headline: req.body?.headline,
-      template: req.body?.template
+      template: req.body?.template,
+      sectionVisibility: req.body?.sectionVisibility
     }, req.currentUser?.id || null);
 
     res.status(201).json({ profile });
@@ -322,7 +323,8 @@ apiRouter.patch('/admin/profiles/:profileId', requireMemberManager, async (req, 
       slug: req.body?.slug,
       headline: req.body?.headline,
       template: req.body?.template,
-      status: req.body?.status
+      status: req.body?.status,
+      sectionVisibility: req.body?.sectionVisibility
     }, req.currentUser?.id || null);
 
     if (!profile) {

@@ -36,6 +36,7 @@ export async function listProfiles() {
   const [rows] = await pool.query(
     `
       SELECT p.slug, p.display_name, p.headline, d.template, d.content_json
+           , p.show_documents, p.show_portfolio, p.show_certifications, p.show_references
       FROM profiles p
       LEFT JOIN documents d
         ON d.profile_id = p.id
@@ -54,6 +55,12 @@ export async function listProfiles() {
       name: row.display_name,
       label: row.headline || 'Professional Profile',
       image: content?.image || content?.images?.profile || '',
+      sectionVisibility: {
+        documents: Boolean(row.show_documents),
+        portfolio: Boolean(row.show_portfolio),
+        certifications: Boolean(row.show_certifications),
+        references: Boolean(row.show_references)
+      },
       ...profileLinks(row.slug)
     };
   });

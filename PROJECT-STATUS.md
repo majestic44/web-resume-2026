@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 Branch: `feature/multi-user-resume-app`
 
 ## Summary
@@ -30,7 +30,7 @@ Admin/app routes:
 - `/login`
 - `/dashboard`
 - `/editor`
-- `/portfolio` legacy portfolio page
+- `/portfolio` dedicated media library page
 - `/profiles`
 - `/members`
 - `/templates`
@@ -45,11 +45,13 @@ Admin/app routes:
 - Public cover letter pages rendered by React templates
 - PDF export via browser print flow
 - Portfolio gallery/cards on public profile pages
+- Public portfolio filtering and larger-image popout viewer
 
 ### Editing workflow
 
 - Resume and cover-letter draft editor with section-based editing
 - Portfolio manager integrated into the editor workflow for per-profile project management
+- Dedicated media library for per-profile uploads and reusable files
 - Save draft
 - Reset draft to source
 - Publish saved draft to the live public document in database mode
@@ -60,9 +62,12 @@ Admin/app routes:
 
 - Profile creation and profile updates
 - Automatic creation of default resume and cover letter documents for new profiles
+- Profile-level section visibility controls for documents, portfolio, certifications, and references
 - Portfolio schema and repository foundation
 - Portfolio project metadata support for project type and progress
 - Portfolio tag presentation support
+- Reusable media upload flow for images and PDFs
+- Media replace/delete support with reference-safe cleanup
 - Template selection per profile
 - Seed-mode profile/document loading
 - Database-mode profile/document loading
@@ -108,10 +113,10 @@ Portfolio seed scaffolding currently lives in:
 ## In Progress / Not Fully Surfaced Yet
 
 - Portfolio editing is database-only and not implemented for seed-mode content
-- Portfolio editor flow needs broader QA with live database content and migration `005_portfolio_project_meta.sql`
-- Media uploads/reusable assets are not yet available; portfolio still relies on URLs or file paths
+- Portfolio, media, and profile-section workflows need broader QA with live database content and migrations `005_portfolio_project_meta.sql`, `006_media_assets.sql`, and `007_profile_section_visibility.sql`
 - Database schema includes `public_links`, `password_resets`, and `audit_logs`, but those are not fully exposed through the current UI flow yet
 - Document versioning exists in the schema and draft publish path, but there is not yet a fuller history-management UI
+- Certifications/licenses and references can now be toggled as public sections, but their underlying content models are still placeholders
 
 ## Current Verification Notes
 
@@ -121,6 +126,8 @@ Portfolio seed scaffolding currently lives in:
 - Production build now passes with `npm.cmd run build`
 - Cover-letter draft editing now uses the same save/reset/publish workflow as the resume editor
 - Portfolio is now managed from the editor, with public project cards, lead images, tags, project type, and progress support
+- Media uploads are now managed from `/portfolio`, with upload, copy-path, replace, and delete controls
+- Public profile sections can now be shown or hidden per profile, and portfolio images can open in a larger popout viewer
 
 ## Recent Milestone Commits
 
@@ -133,8 +140,8 @@ Portfolio seed scaffolding currently lives in:
 
 ## Recommended Next Steps
 
-1. Apply migration `005_portfolio_project_meta.sql` and verify portfolio create/edit flows in database mode.
-2. Populate real portfolio content and test public profile cards with live images, links, tags, and progress values.
-3. Build the media library/upload workflow so portfolio management does not depend on manual file paths or external URLs.
-4. Decide whether seed-mode portfolio editing is worth supporting or whether portfolio remains database-only.
-5. Choose the next CMS surface to expose after portfolio polish: version history, share-link management, or application tracking/private notes.
+1. Apply migrations `005_portfolio_project_meta.sql`, `006_media_assets.sql`, and `007_profile_section_visibility.sql`, then verify the related workflows in database mode.
+2. Populate real portfolio content and test public profile cards with live images, links, tags, filters, and progress values.
+3. Decide whether certifications/licenses or references should become the next real content model behind the new public-section toggles.
+4. Choose the next CMS surface to expose after profile/portfolio polish: version history, share-link management, or application tracking/private notes.
+5. Decide whether seed-mode portfolio editing is worth supporting or whether portfolio remains database-only.
