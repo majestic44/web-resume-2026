@@ -21,6 +21,7 @@ Public routes:
 
 - `/` private landing page with sign-in access only
 - `/shared/resume/:token` isolated shared resume access
+- `/shared/profile/:token` isolated shared profile access
 
 Admin/app routes:
 
@@ -38,6 +39,7 @@ Admin/app routes:
 
 - No anonymous household profile directory or slug-based document access
 - Token-only shared resume pages rendered by React templates
+- Token-only shared profile pages with resume, portfolio, certifications, and password-protected references
 - Generic landing page that does not expose household member information
 - HeroUI modal-based sign-in from the landing page, with `/login` redirect compatibility
 - PDF export via browser print flow
@@ -60,6 +62,7 @@ Admin/app routes:
 - Draft history tracking
 - Authenticated internal preview routes from the editor
 - Per-profile resume share-link controls with create, copy, regenerate, and disable actions
+- Per-profile profile-share controls with a separate reference password
 
 ### Multi-profile CMS foundation
 
@@ -90,11 +93,12 @@ Admin/app routes:
 - owner/admin management of member assignments
 - 256-bit opaque resume share tokens stored only as secure hashes
 - immediate share-link rotation and revocation
+- separately hashed profile-share tokens and bcrypt-protected reference passwords
 
 ### Data layer
 
 - MariaDB migrations for users, profiles, profile roles, documents, versions, public links, password resets, audit logs, drafts, and sessions
-- Follow-up migrations for portfolio metadata, media assets, profile section visibility, certifications, references, draft authors, and resume share links
+- Follow-up migrations for portfolio metadata, media assets, profile section visibility, certifications, references, draft authors, resume share links, and profile share links
 - seed JSON document storage
 - file-based draft storage in seed mode
 - database draft storage in database mode
@@ -121,7 +125,7 @@ Portfolio seed scaffolding currently lives in:
 ## In Progress / Not Fully Surfaced Yet
 
 - Portfolio editing is database-only and not implemented for seed-mode content
-- Portfolio, media, certifications, references, profile-section, and resume-share workflows need broader QA with live database content and migrations through `011_profile_resume_share_links.sql`
+- Portfolio, media, certifications, references, profile-section, resume-share, and profile-share workflows need broader QA with live database content and migrations through `012_profile_share_links.sql`
 - Database schema includes `public_links`, `password_resets`, and `audit_logs`, but those are not fully exposed through the current UI flow yet
 - Draft history restore now exists in the editor, but there is not yet a richer side-by-side diff or publish-version timeline UI
 
@@ -138,6 +142,7 @@ Portfolio seed scaffolding currently lives in:
 - Certifications and references now have dedicated editor workspaces plus public profile card rendering
 - Resume and cover-letter editor now expose saved draft history entries with snapshot restore support
 - Resumes can now be shared privately through opaque, hashed, revocable per-profile links
+- Complete profile views can be shared privately without exposing cover letters; references require a separate password
 
 ## Recent Milestone Commits
 
@@ -150,8 +155,8 @@ Portfolio seed scaffolding currently lives in:
 
 ## Recommended Next Steps
 
-1. Apply migrations through `011_profile_resume_share_links.sql`, then verify the related workflows in database mode.
-2. Test that invalid, revoked, and rotated share tokens return 404 while valid links can export PDFs.
+1. Apply migrations through `012_profile_share_links.sql`, then verify the related workflows in database mode.
+2. Test that invalid, revoked, and rotated share tokens return 404 while valid profile links hide cover letters and protect references with the configured password.
 3. Populate real portfolio, certification, and reference content and test authenticated preview cards with live images, links, tags, and contact details.
 4. Choose the next CMS surface to expose: application tracking/private notes, profile packet export, or separately scoped cover-letter sharing.
 5. Decide whether seed-mode portfolio editing is worth supporting or whether portfolio remains database-only.

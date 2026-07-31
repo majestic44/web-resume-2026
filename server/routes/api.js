@@ -34,9 +34,15 @@ import { createProfile, listManagedProfiles, updateProfile } from '../repositori
 import { canEditProfile } from '../repositories/authRepository.js';
 import {
   createOrRotateResumeShareLink,
+  createOrRotateProfileShareLink,
   findShareLinkProfile,
+  readProfileShareLink,
   readResumeShareLink,
+  resolveSharedProfile,
+  resolveSharedProfileReferences,
+  resolveSharedProfileResume,
   resolveSharedResume,
+  revokeProfileShareLink,
   revokeResumeShareLink
 } from '../repositories/shareLinkRepository.js';
 import { serializeCookie } from '../services/cookieStore.js';
@@ -84,6 +90,12 @@ function shareUrlForRequest(req, token) {
   const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
   const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
   return `${baseUrl}/shared/resume/${token}`;
+}
+
+function profileShareUrlForRequest(req, token) {
+  const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
+  const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
+  return `${baseUrl}/shared/profile/${token}`;
 }
 
 async function requireShareLinkManager(req, res, next) {
@@ -332,6 +344,62 @@ apiRouter.get('/shared/resume/:token', async (req, res, next) => {
   }
 });
 
+apiRouter.get('/shared/profile/:token', async (req, res, next) => {
+  try {
+    res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
+    const profile = await resolveSharedProfile(req.params.token);
+    if (!profile) {
+      res.status(404).json({ error: 'Shared profile not found.' });
+      return;
+    }
+
+    res.json(profile);
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Shared profile links are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
+apiRouter.get('/shared/profile/:token/resume', async (req, res, next) => {
+  try {
+    res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
+    const document = await resolveSharedProfileResume(req.params.token);
+    if (!document) {
+      res.status(404).json({ error: 'Shared profile not found.' });
+      return;
+    }
+
+    res.json(document);
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Shared profile links are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
+apiRouter.post('/shared/profile/:token/references', async (req, res, next) => {
+  try {
+    res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
+    const result = await resolveSharedProfileReferences(req.params.token, req.body?.password);
+    if (!result) {
+      res.status(404).json({ error: 'Shared profile not found.' });
+      return;
+    }
+    if (result.status === 'hidden') {
+      res.status(404).json({ error: 'Shared profile not found.' });
+      return;
+    }
+    if (result.status === 'invalid_password') {
+      res.status(401).json({ error: 'The reference password is incorrect.' });
+      return;
+    }
+
+    res.json({ references: result.references });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Shared profile links are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
 apiRouter.post('/auth/login', async (req, res, next) => {
   try {
     if (getDataSource() !== 'database') {
@@ -438,6 +506,45 @@ apiRouter.delete('/admin/profiles/:profileId/share-link', requireShareLinkManage
       return;
     }
 
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:profileId/profile-share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const share = await readProfileShareLink(req.shareLinkProfile.id);
+    res.json({ link: share?.link || null });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Profile sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:profileId/profile-share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const share = await createOrRotateProfileShareLink(req.shareLinkProfile.id, req.body?.referencesPassword, req.currentUser?.id || null);
+    if (!share) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({ link: share.link, shareUrl: profileShareUrlForRequest(req, share.token) });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Profile sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    if (error.message === 'Choose a reference password with at least 12 characters.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:profileId/profile-share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    await revokeProfileShareLink(req.shareLinkProfile.id);
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Profile sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
     next(error);
   }
 });

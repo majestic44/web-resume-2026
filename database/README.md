@@ -20,3 +20,4 @@ For the current portfolio/media/profile feature set, make sure these later migra
 - `009_profile_references.sql`
 - `010_document_draft_authors.sql`
 - `011_profile_resume_share_links.sql`
+- `012_profile_share_links.sql`

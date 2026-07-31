@@ -37,6 +37,7 @@ Useful routes:
 
 - `/` - private landing page with modal-based sign-in
 - `/shared/resume/:token` - isolated shared resume
+- `/shared/profile/:token` - isolated shared profile with protected references
 - `/login` - compatibility redirect to the landing-page sign-in modal
 - `/dashboard` - admin dashboard
 - `/editor` - resume draft editor
@@ -55,6 +56,7 @@ API routes run through Express on port `3000` during local development:
 - `/api/internal/profiles/:slug`
 - `/api/internal/documents/:type/:slug`
 - `/api/shared/resume/:token`
+- `/api/shared/profile/:token`
 - `/api/drafts/resume/:slug`
 - `/api/drafts/cover-letter/:slug`
 - `/api/drafts/resume/:slug/publish`
@@ -210,6 +212,16 @@ Resume sharing is available only in `DATA_SOURCE=database` mode. Authorized prof
 - Shared pages contain only that resume and PDF export. They do not link to the household directory or CMS.
 - Cover letters, portfolios, certifications, references, and other household profiles are not shared by this feature.
 
+## Private Profile Sharing
+
+Authorized profile managers can also create a separate **Share Profile** link from `/editor`.
+
+- Shared profile URLs use `/shared/profile/:token` and have a distinct opaque token from resume links.
+- A profile link can display the profile summary, resume, public portfolio items, and enabled certifications.
+- Cover letters are never included in a shared profile link.
+- References are never returned with the initial profile response. Creating or regenerating a profile link requires a separate reference password of at least 12 characters; viewers must enter it before reference contact information is requested.
+- Regenerating or disabling the profile link immediately revokes access to the shared profile, resume, and reference-unlock endpoint.
+
 ## Member Access
 
 Owner/admin accounts can manage household members from `/members`.
@@ -245,6 +257,7 @@ Recent migrations to make sure are applied before testing newer profile/portfoli
 - `009_profile_references.sql`
 - `010_document_draft_authors.sql`
 - `011_profile_resume_share_links.sql`
+- `012_profile_share_links.sql`
 
 ## PDF Export
 
@@ -275,3 +288,4 @@ After deploying to Plesk:
 5. Create a resume share link from `/editor`, then open `/shared/resume/{token}` in a signed-out browser and verify the live page updated
 6. Regenerate and disable the link, confirming the old URLs return `404`
 7. Use **Export PDF** on the shared resume page to verify print output
+8. Create a profile share link, confirm the cover letter is absent, and verify references require the separate password

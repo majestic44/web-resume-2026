@@ -67,6 +67,13 @@ export function App() {
     return <DocumentPage pathname={pathname} shared />;
   }
 
+  if (pathname.startsWith('/shared/profile/')) {
+    if (pathname.endsWith('/resume')) {
+      return <DocumentPage pathname={pathname} shared sharedProfile />;
+    }
+    return <ProfilePublic pathname={pathname} shared />;
+  }
+
   if (pathname === '/') {
     return <LandingPage {...pageProps} />;
   }

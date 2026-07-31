@@ -30,6 +30,7 @@ Last updated: 2026-06-13
 - [x] References data model
 - [x] Draft version history UI with restore workflow
 - [x] Private resume sharing with opaque 256-bit tokens, secure token hashes, rotation, revocation, and access tracking
+- [x] Private profile sharing with separate opaque tokens and password-protected references
 
 ## In Progress / Partial
 
@@ -88,6 +89,8 @@ Last updated: 2026-06-13
 - [ ] Confirm the landing-page sign-in modal handles invalid credentials, keyboard submission, Escape, and dashboard redirection
 - [ ] Confirm anonymous `/resume/:slug`, `/profile/:slug`, and `/api/documents/:type/:slug` do not expose documents
 - [ ] Confirm a valid `/shared/resume/:token` renders only its assigned resume and exports as PDF
+- [ ] Confirm a valid `/shared/profile/:token` renders the intended profile without a cover letter
+- [ ] Confirm protected references are absent from the initial profile response and require the configured password
 - [ ] Confirm regenerated and disabled share links return 404 immediately
 - [ ] Confirm profile images display when present and fall back to initials when missing
 - [ ] Confirm resume editor still saves/publishes correctly

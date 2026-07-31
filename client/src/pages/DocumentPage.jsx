@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { normalizeCoverLetterData, normalizeResumeData } from '../lib/resume.js';
 import { getTemplateDefinition } from '../templates/registry.js';
 
-export function DocumentPage({ pathname, shared = false }) {
+export function DocumentPage({ pathname, shared = false, sharedProfile = false }) {
   const [state, setState] = useState({ status: 'loading', document: null });
   const { type, slug, token } = useMemo(() => {
     if (shared) {
@@ -15,7 +15,9 @@ export function DocumentPage({ pathname, shared = false }) {
   }, [pathname, shared]);
 
   useEffect(() => {
-    const endpoint = shared ? `/api/shared/resume/${token}` : `/api/internal/documents/${type}/${slug}`;
+    const endpoint = shared
+      ? (sharedProfile ? `/api/shared/profile/${token}/resume` : `/api/shared/resume/${token}`)
+      : `/api/internal/documents/${type}/${slug}`;
 
     fetch(endpoint)
       .then(response => {
@@ -24,7 +26,7 @@ export function DocumentPage({ pathname, shared = false }) {
       })
       .then(document => setState({ status: 'ready', document }))
       .catch(error => setState({ status: 'error', error }));
-  }, [shared, token, type, slug]);
+  }, [shared, sharedProfile, token, type, slug]);
 
   if (state.status === 'loading') {
     return <DocumentFrame title="Loading" shared={shared}><p className="muted">Loading document...</p></DocumentFrame>;

@@ -1,4 +1,4 @@
-import { Award, BriefcaseBusiness, ExternalLink, FileText, Mail, MailOpen, Phone, Users } from 'lucide-react';
+import { Award, BriefcaseBusiness, ExternalLink, FileText, LockKeyhole, Mail, MailOpen, Phone, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function getInitials(name) {
@@ -85,13 +85,17 @@ function assetKindLabel(asset, href) {
   }
 }
 
-export function ProfilePublic({ pathname }) {
-  const slug = useMemo(() => pathname.split('/')[2] || '', [pathname]);
+export function ProfilePublic({ pathname, shared = false }) {
+  const slug = useMemo(() => shared ? '' : (pathname.split('/')[2] || ''), [pathname, shared]);
+  const token = useMemo(() => shared ? (pathname.split('/')[3] || '') : '', [pathname, shared]);
   const [state, setState] = useState({ status: 'loading', payload: null });
   const [selectedType, setSelectedType] = useState('');
   const [selectedProgress, setSelectedProgress] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [referencePassword, setReferencePassword] = useState('');
+  const [referenceStatus, setReferenceStatus] = useState('idle');
+  const [referenceError, setReferenceError] = useState('');
   const profile = state.payload?.profile || null;
   const portfolioItems = state.payload?.portfolioItems || [];
   const certifications = state.payload?.certifications || [];
@@ -105,26 +109,57 @@ export function ProfilePublic({ pathname }) {
   };
 
   useEffect(() => {
-    if (!slug) {
+    if (!slug && !token) {
       setState({ status: 'error', error: new Error('Profile not found') });
       return;
     }
 
-    fetch(`/api/internal/profiles/${slug}`)
+    const endpoint = shared ? `/api/shared/profile/${token}` : `/api/internal/profiles/${slug}`;
+    fetch(endpoint)
       .then(response => {
         if (!response.ok) throw new Error('Profile not found');
         return response.json();
       })
       .then(payload => setState({ status: 'ready', payload }))
       .catch(error => setState({ status: 'error', error }));
-  }, [slug]);
+  }, [shared, slug, token]);
 
   useEffect(() => {
     setSelectedType('');
     setSelectedProgress('');
     setSelectedTag('');
     setLightboxImage(null);
-  }, [slug]);
+    setReferencePassword('');
+    setReferenceStatus('idle');
+    setReferenceError('');
+  }, [shared, slug, token]);
+
+  const unlockReferences = async event => {
+    event.preventDefault();
+    if (!shared || !token || referenceStatus === 'loading') return;
+
+    setReferenceStatus('loading');
+    setReferenceError('');
+    try {
+      const response = await fetch(`/api/shared/profile/${token}/references`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: referencePassword })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to unlock references.');
+
+      setState(current => ({
+        ...current,
+        payload: { ...current.payload, references: payload.references || [] }
+      }));
+      setReferencePassword('');
+      setReferenceStatus('unlocked');
+    } catch (unlockError) {
+      setReferenceError(unlockError.message);
+      setReferenceStatus('error');
+    }
+  };
 
   useEffect(() => {
     if (!lightboxImage) return undefined;
@@ -197,14 +232,14 @@ export function ProfilePublic({ pathname }) {
   return (
     <div className="site-shell directory-shell">
       <header className="site-topbar no-print">
-          <a className="site-brand" href="/dashboard">
+          <div className="site-brand">
           <strong>{profile.name}</strong>
-          <span>Professional Profile</span>
-        </a>
+          <span>{shared ? 'Shared Professional Profile' : 'Professional Profile'}</span>
+        </div>
         <nav>
-          <a href="/dashboard">Dashboard</a>
+          {!shared ? <a href="/dashboard">Dashboard</a> : null}
           {sectionVisibility.documents ? <a href={profile.resumeLink}>Resume</a> : null}
-          {sectionVisibility.documents ? <a href={profile.coverLetterLink}>Cover Letter</a> : null}
+          {!shared && sectionVisibility.documents ? <a href={profile.coverLetterLink}>Cover Letter</a> : null}
         </nav>
       </header>
 
@@ -233,10 +268,10 @@ export function ProfilePublic({ pathname }) {
                 <FileText size={16} />
                 <span>View Resume</span>
               </a>
-              <a className="hero-link-button" href={profile.coverLetterLink}>
+              {!shared ? <a className="hero-link-button" href={profile.coverLetterLink}>
                 <MailOpen size={16} />
                 <span>View Cover Letter</span>
-              </a>
+              </a> : null}
             </div>
           ) : null}
         </section>
@@ -246,9 +281,9 @@ export function ProfilePublic({ pathname }) {
             <div className="directory-section-head">
               <div>
                 <p className="eyebrow">Documents</p>
-                <h2>Resume and cover letter</h2>
+                <h2>{shared ? 'Professional resume' : 'Resume and cover letter'}</h2>
               </div>
-              <p>Open the core job application documents for this profile.</p>
+              <p>{shared ? 'Open the resume included with this shared profile.' : 'Open the core job application documents for this profile.'}</p>
             </div>
 
             <section className="public-document-grid" aria-label="Public documents">
@@ -262,7 +297,7 @@ export function ProfilePublic({ pathname }) {
                   <p>Open the current resume view for this profile.</p>
                 </div>
               </a>
-              <a className="public-document-card" href={profile.coverLetterLink}>
+              {!shared ? <a className="public-document-card" href={profile.coverLetterLink}>
                 <div className="public-document-card__icon">
                   <MailOpen size={18} />
                 </div>
@@ -271,7 +306,7 @@ export function ProfilePublic({ pathname }) {
                   <h3>General cover letter</h3>
                   <p>Open the public cover letter paired with this resume.</p>
                 </div>
-              </a>
+              </a> : null}
             </section>
           </section>
         ) : null}
@@ -537,10 +572,34 @@ export function ProfilePublic({ pathname }) {
                 <p className="eyebrow">References</p>
                 <h2>References</h2>
               </div>
-              <p>{references.length} reference{references.length === 1 ? '' : 's'} available.</p>
+              <p>{shared && referenceStatus !== 'unlocked' ? 'Password protected.' : `${references.length} reference${references.length === 1 ? '' : 's'} available.`}</p>
             </div>
 
-            {references.length ? (
+            {shared && profile.referenceAccess === 'password' && referenceStatus !== 'unlocked' ? (
+              <form className="shared-references-lock" onSubmit={unlockReferences}>
+                <div className="shared-references-lock__icon"><LockKeyhole size={19} /></div>
+                <div>
+                  <h3>References are protected</h3>
+                  <p>Enter the reference password provided by the profile owner to view contact details.</p>
+                </div>
+                <label>
+                  <span>Reference password</span>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={referencePassword}
+                    onChange={event => setReferencePassword(event.target.value)}
+                    disabled={referenceStatus === 'loading'}
+                    required
+                  />
+                </label>
+                {referenceError ? <p className="shared-references-lock__error" role="alert">{referenceError}</p> : null}
+                <button type="submit" className="hero-link-button primary" disabled={referenceStatus === 'loading'}>
+                  <LockKeyhole size={16} />
+                  <span>{referenceStatus === 'loading' ? 'Unlocking...' : 'Unlock References'}</span>
+                </button>
+              </form>
+            ) : references.length ? (
               <section className="public-reference-grid" aria-label="Professional references">
                 {references.map(item => {
                   const subhead = [item.title, item.company].filter(Boolean).join(' / ');
