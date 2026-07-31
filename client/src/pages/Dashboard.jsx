@@ -9,7 +9,7 @@ export function Dashboard({ authState }) {
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
-    fetch('/api/profiles')
+    fetch('/api/internal/profiles')
       .then(response => response.json())
       .then(data => {
         setProfiles(data.profiles || []);
@@ -55,9 +55,9 @@ export function Dashboard({ authState }) {
             <span>Manage Members</span>
           </Link>
         ) : null}
-        <Link className="hero-link-button" href="/">
+        <Link className="hero-link-button" href="/editor">
           <Eye size={16} />
-          <span>Public Directory</span>
+          <span>Preview Documents</span>
         </Link>
       </section>
 

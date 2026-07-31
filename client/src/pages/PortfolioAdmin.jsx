@@ -94,7 +94,7 @@ export function PortfolioAdmin({ authState }) {
   useEffect(() => {
     setError('');
 
-    fetch('/api/profiles')
+    fetch('/api/internal/profiles')
       .then(response => response.json())
       .then(payload => {
         const nextProfiles = payload.profiles || [];

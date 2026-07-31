@@ -1,7 +1,10 @@
 import { Button, Card, Chip, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { Eye, ImagePlus, Plus, RotateCcw, Save, Send, Trash2 } from 'lucide-react';
+import { Eye, History, ImagePlus, Plus, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CertificationsWorkspace } from '../components/CertificationsWorkspace.jsx';
 import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
+import { ReferencesWorkspace } from '../components/ReferencesWorkspace.jsx';
+import { ResumeSharePanel } from '../components/ResumeSharePanel.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { addBodyParagraph, coverLetterDraftToJson, createCoverLetterDraft, removeArrayItem as removeCoverLetterArrayItem } from '../lib/coverLetterDraft.js';
 import {
@@ -16,7 +19,9 @@ import { templateOptions } from '../templates/registry.js';
 const documentTypeOptions = [
   { id: 'resume', label: 'Resume' },
   { id: 'cover-letter', label: 'Cover Letter' },
-  { id: 'portfolio', label: 'Portfolio' }
+  { id: 'portfolio', label: 'Portfolio' },
+  { id: 'certifications', label: 'Certifications' },
+  { id: 'references', label: 'References' }
 ];
 
 const editorSections = {
@@ -33,6 +38,12 @@ const editorSections = {
     { id: 'recipient', label: 'Recipient' },
     { id: 'content', label: 'Content' },
     { id: 'json', label: 'JSON Preview' }
+  ],
+  certifications: [
+    { id: 'items', label: 'Items' }
+  ],
+  references: [
+    { id: 'items', label: 'Items' }
   ],
   portfolio: [
     { id: 'projects', label: 'Projects' }
@@ -64,17 +75,21 @@ function draftToJsonForType(type, draft) {
 }
 
 function documentPreviewPath(type, slug) {
-  if (type === 'portfolio') return `/profile/${slug}`;
+  if (['portfolio', 'certifications', 'references'].includes(type)) return `/profile/${slug}`;
   return type === 'cover-letter' ? `/cover-letter/${slug}` : `/resume/${slug}`;
 }
 
 function documentTypeTitle(type) {
   if (type === 'portfolio') return 'portfolio';
+  if (type === 'certifications') return 'certifications';
+  if (type === 'references') return 'references';
   return type === 'cover-letter' ? 'cover letter' : 'resume';
 }
 
 function documentTypeHeadline(type) {
   if (type === 'portfolio') return 'Portfolio manager';
+  if (type === 'certifications') return 'Certifications manager';
+  if (type === 'references') return 'References manager';
   return type === 'cover-letter' ? 'Cover letter editor' : 'Resume editor';
 }
 
@@ -84,6 +99,22 @@ function documentCountSummary(type, json) {
       { label: 'Projects', value: '-' },
       { label: 'Public', value: '-' },
       { label: 'Featured', value: '-' }
+    ];
+  }
+
+  if (type === 'certifications') {
+    return [
+      { label: 'Credentials', value: '-' },
+      { label: 'Active', value: '-' },
+      { label: 'Expired', value: '-' }
+    ];
+  }
+
+  if (type === 'references') {
+    return [
+      { label: 'References', value: '-' },
+      { label: 'Public', value: '-' },
+      { label: 'Contact Ready', value: '-' }
     ];
   }
 
@@ -113,6 +144,29 @@ function replaceMediaPathValue(currentValue, fromPath, toPath) {
   return currentValue === fromPath ? toPath : currentValue;
 }
 
+function normalizeSnapshotContent(content, fallbackTemplate = 'modern') {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+    return {};
+  }
+
+  return {
+    ...content,
+    template: content.template || fallbackTemplate
+  };
+}
+
+function historySourceStatus(entry, liveUpdatedAt) {
+  if (!entry?.sourceUpdatedAt || !liveUpdatedAt) return '';
+
+  const sourceTime = new Date(entry.sourceUpdatedAt).getTime();
+  const liveTime = new Date(liveUpdatedAt).getTime();
+
+  if (Number.isNaN(sourceTime) || Number.isNaN(liveTime)) return '';
+  if (sourceTime < liveTime) return 'Saved before the latest published update';
+  if (sourceTime > liveTime) return 'Saved against newer source data';
+  return 'Saved against the current live document';
+}
+
 export function Editor({ authState }) {
   const [profiles, setProfiles] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState('jareth');
@@ -125,12 +179,16 @@ export function Editor({ authState }) {
   const [error, setError] = useState('');
   const [saveState, setSaveState] = useState('idle');
   const [publishState, setPublishState] = useState('idle');
+  const [restoreState, setRestoreState] = useState('idle');
   const [savedJsonText, setSavedJsonText] = useState('{}');
   const [statusMessage, setStatusMessage] = useState('');
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [savedDraftMeta, setSavedDraftMeta] = useState(null);
+  const [selectedHistoryVersionId, setSelectedHistoryVersionId] = useState('');
+  const isWorkspaceMode = ['portfolio', 'certifications', 'references'].includes(selectedDocumentType);
 
   useEffect(() => {
-    fetch('/api/profiles')
+    fetch('/api/internal/profiles')
       .then(response => response.json())
       .then(data => {
         const nextProfiles = data.profiles || [];
@@ -152,13 +210,21 @@ export function Editor({ authState }) {
   useEffect(() => {
     if (!selectedSlug) return;
 
-    if (selectedDocumentType === 'portfolio') {
+    if (isWorkspaceMode) {
       setSourceDocument(null);
       setDraft(null);
       setHistory([]);
       setSavedJsonText('{}');
       setHasSavedDraft(false);
-      setStatusMessage('Portfolio items are managed directly for the selected profile.');
+      setSavedDraftMeta(null);
+      setSelectedHistoryVersionId('');
+      setStatusMessage(
+        selectedDocumentType === 'portfolio'
+          ? 'Portfolio items are managed directly for the selected profile.'
+          : selectedDocumentType === 'certifications'
+            ? 'Certifications are managed directly for the selected profile.'
+            : 'References are managed directly for the selected profile.'
+      );
       setSaveState('idle');
       setPublishState('idle');
       setStatus('ready');
@@ -168,7 +234,7 @@ export function Editor({ authState }) {
     setStatus('loading');
     setError('');
 
-    fetch(`/api/documents/${selectedDocumentType}/${selectedSlug}`)
+    fetch(`/api/internal/documents/${selectedDocumentType}/${selectedSlug}`)
       .then(response => {
         if (!response.ok) throw new Error(`Unable to load ${documentTypeTitle(selectedDocumentType)} document.`);
         return response.json();
@@ -190,6 +256,8 @@ export function Editor({ authState }) {
         setHistory(draftPayload.history || []);
         setSavedJsonText(JSON.stringify(startingContent, null, 2));
         setHasSavedDraft(Boolean(draftPayload.draft));
+        setSavedDraftMeta(draftPayload.draft || null);
+        setSelectedHistoryVersionId(draftPayload.history?.[0]?.versionId || '');
         setStatusMessage(
           draftPayload.draft
             ? `Loaded saved draft from ${formatTimestamp(draftPayload.draft.savedAt)}`
@@ -203,11 +271,11 @@ export function Editor({ authState }) {
         setError(fetchError.message);
         setStatus('error');
       });
-  }, [selectedSlug, selectedDocumentType]);
+  }, [isWorkspaceMode, selectedDocumentType, selectedSlug]);
 
   const generatedJson = useMemo(
-    () => (selectedDocumentType === 'portfolio' || !draft ? null : draftToJsonForType(selectedDocumentType, draft)),
-    [draft, selectedDocumentType]
+    () => (isWorkspaceMode || !draft ? null : draftToJsonForType(selectedDocumentType, draft)),
+    [draft, isWorkspaceMode, selectedDocumentType]
   );
   const generatedJsonText = useMemo(() => JSON.stringify(generatedJson || {}, null, 2), [generatedJson]);
 
@@ -232,7 +300,7 @@ export function Editor({ authState }) {
 
   const selectedProfile = profiles.find(profile => profile.slug === selectedSlug);
   const isPortfolioMode = selectedDocumentType === 'portfolio';
-  const isDirty = !isPortfolioMode && Boolean(sourceDocument && generatedJsonText !== savedJsonText);
+  const isDirty = !isWorkspaceMode && Boolean(sourceDocument && generatedJsonText !== savedJsonText);
   const canEditSelectedProfile = authState.dataSource !== 'database'
     || (authState.user && editableProfiles.some(profile => profile.slug === selectedSlug));
   const canPublishDraft = authState.dataSource === 'database'
@@ -265,12 +333,14 @@ export function Editor({ authState }) {
       setDraft(createDraftForType(selectedDocumentType, sourceDocument.content));
       setSavedJsonText(JSON.stringify(sourceDocument.content, null, 2));
       setHasSavedDraft(false);
+      setSavedDraftMeta(null);
       setStatusMessage(`Draft reset to source ${documentTypeTitle(selectedDocumentType)}`);
       setSaveState('idle');
 
       const draftResponse = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}`);
       const draftPayload = draftResponse.ok ? await draftResponse.json() : { history: [] };
       setHistory(draftPayload.history || []);
+      setSelectedHistoryVersionId(draftPayload.history?.[0]?.versionId || '');
     } catch (resetError) {
       setError(resetError.message);
       setSaveState('error');
@@ -301,6 +371,8 @@ export function Editor({ authState }) {
       setSavedJsonText(JSON.stringify(payload.draft.content, null, 2));
       setHistory(payload.history || []);
       setHasSavedDraft(true);
+      setSavedDraftMeta(payload.draft || null);
+      setSelectedHistoryVersionId(current => current || payload.history?.[0]?.versionId || '');
       if (!options.silent) {
         setStatusMessage(`Draft saved at ${formatTimestamp(payload.draft.savedAt)}`);
       }
@@ -343,6 +415,8 @@ export function Editor({ authState }) {
       setSavedJsonText(JSON.stringify(liveContent, null, 2));
       setHistory(payload.history || []);
       setHasSavedDraft(false);
+      setSavedDraftMeta(null);
+      setSelectedHistoryVersionId(payload.history?.[0]?.versionId || '');
       setStatusMessage(`Published live ${documentTypeTitle(selectedDocumentType)} at ${formatTimestamp(payload.document.meta?.updatedAt || payload.publishedAt)}`);
       setSaveState('idle');
       setPublishState('published');
@@ -352,12 +426,71 @@ export function Editor({ authState }) {
     }
   };
 
+  const selectedHistoryEntry = useMemo(
+    () => history.find(entry => entry.versionId === selectedHistoryVersionId) || history[0] || null,
+    [history, selectedHistoryVersionId]
+  );
+  const selectedHistoryContent = useMemo(
+    () => normalizeSnapshotContent(selectedHistoryEntry?.content, sourceDocument?.content?.template || selectedProfile?.template || 'modern'),
+    [selectedHistoryEntry, sourceDocument?.content?.template, selectedProfile?.template]
+  );
+  const selectedHistorySummaryItems = useMemo(
+    () => documentCountSummary(selectedDocumentType, selectedHistoryContent),
+    [selectedDocumentType, selectedHistoryContent]
+  );
+
+  const restoreHistoryVersion = async entry => {
+    if (!entry?.versionId) return;
+
+    const hasUnsavedChanges = isDirty;
+    const confirmMessage = hasUnsavedChanges
+      ? 'Restore this saved version as the current draft? Your unsaved editor changes will be replaced.'
+      : 'Restore this saved version as the current draft?';
+    if (!window.confirm(confirmMessage)) return;
+
+    setRestoreState(entry.versionId);
+    setError('');
+    setPublishState('idle');
+
+    try {
+      const response = await fetch(`/api/drafts/${selectedDocumentType}/${selectedSlug}/restore/${entry.versionId}`, {
+        method: 'POST'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to restore draft version.');
+      }
+
+      const nextContent = normalizeSnapshotContent(
+        payload.draft?.content,
+        sourceDocument?.content?.template || selectedProfile?.template || 'modern'
+      );
+
+      setDraft(createDraftForType(selectedDocumentType, nextContent));
+      setSavedJsonText(JSON.stringify(nextContent, null, 2));
+      setHistory(payload.history || []);
+      setHasSavedDraft(Boolean(payload.draft));
+      setSavedDraftMeta(payload.draft || null);
+      setSelectedHistoryVersionId(payload.draft?.versionId || payload.history?.[0]?.versionId || '');
+      setSaveState('saved');
+      setStatusMessage(`Restored draft snapshot from ${formatTimestamp(entry.savedAt)}`);
+    } catch (restoreError) {
+      setError(restoreError.message);
+    } finally {
+      setRestoreState('idle');
+    }
+  };
+
   return (
     <>
       <PageHeader eyebrow="Editor Draft" title={documentTypeHeadline(selectedDocumentType)}>
         <p>
           {selectedDocumentType === 'portfolio'
             ? 'Manage each profile portfolio from the same editor workspace used for resumes and cover letters. Add project cards with images, descriptions, links, type, and progress.'
+            : selectedDocumentType === 'certifications'
+            ? 'Manage each profile certifications, licenses, and training credentials from the same editor workspace used for resumes, cover letters, and portfolio items.'
+            : selectedDocumentType === 'references'
+            ? 'Manage each profile references, recommendation notes, and contact details from the same editor workspace used for resumes, cover letters, portfolio items, and certifications.'
             : authState.dataSource === 'database'
             ? authState.user
               ? `Edits save to protected draft history for the signed-in account before you publish the live ${documentTypeTitle(selectedDocumentType)}.`
@@ -385,17 +518,23 @@ export function Editor({ authState }) {
             <select
               value={draft?.template || selectedProfile?.template || 'modern'}
               onChange={event => updateDraft(current => ({ ...current, template: event.target.value }))}
-              disabled={!draft || isPortfolioMode}
+              disabled={!draft || isWorkspaceMode}
             >
               {templateOptions.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
             </select>
           </label>
         </div>
         <div className="editor-status">
-          <Chip color={isPortfolioMode ? 'primary' : (isDirty ? 'warning' : 'success')} variant="soft">
-            {isPortfolioMode ? 'Portfolio workspace' : (isDirty ? 'Unsaved draft' : 'Synced to source')}
+          <Chip color={isWorkspaceMode ? 'primary' : (isDirty ? 'warning' : 'success')} variant="soft">
+            {isWorkspaceMode
+              ? (selectedDocumentType === 'portfolio'
+                  ? 'Portfolio workspace'
+                  : selectedDocumentType === 'certifications'
+                    ? 'Certifications workspace'
+                    : 'References workspace')
+              : (isDirty ? 'Unsaved draft' : 'Synced to source')}
           </Chip>
-          {!isPortfolioMode && (draft?.template ? <Chip variant="flat">{draft.template}</Chip> : selectedProfile ? <Chip variant="flat">{selectedProfile.template}</Chip> : null)}
+          {!isWorkspaceMode && (draft?.template ? <Chip variant="flat">{draft.template}</Chip> : selectedProfile ? <Chip variant="flat">{selectedProfile.template}</Chip> : null)}
           {statusMessage ? <Chip variant="bordered">{statusMessage}</Chip> : null}
         </div>
       </section>
@@ -406,8 +545,12 @@ export function Editor({ authState }) {
         <p className="editor-error">This account does not have any assigned editable profiles yet.</p>
       ) : null}
 
-      {isPortfolioMode ? (
+      {selectedDocumentType === 'portfolio' ? (
         <PortfolioWorkspace authState={authState} profile={selectedProfile} />
+      ) : selectedDocumentType === 'certifications' ? (
+        <CertificationsWorkspace authState={authState} profile={selectedProfile} />
+      ) : selectedDocumentType === 'references' ? (
+        <ReferencesWorkspace authState={authState} profile={selectedProfile} />
       ) : (
       <section className="editor-layout wide">
         <Card>
@@ -488,16 +631,94 @@ export function Editor({ authState }) {
                 </div>
               ))}
             </dl>
+            {selectedDocumentType === 'resume' ? <ResumeSharePanel authState={authState} profile={selectedProfile} /> : null}
             <div className="history-block">
-              <p className="card-label">Recent Saves</p>
+              <div className="history-block__head">
+                <div>
+                  <p className="card-label">Version History</p>
+                  <h3>Recent saves</h3>
+                </div>
+                <span className="history-count-chip">
+                  <History size={14} />
+                  <span>{history.length}</span>
+                </span>
+              </div>
               {history.length === 0 ? <p className="muted">No saved snapshots yet.</p> : null}
-              {history.slice(0, 5).map(entry => (
-                <div className="history-row" key={entry.versionId}>
-                  <span>{formatTimestamp(entry.savedAt)}</span>
-                  <small>{entry.versionId.slice(0, 8)}</small>
+              {history.slice(0, 8).map(entry => (
+                <div className={`history-row${selectedHistoryEntry?.versionId === entry.versionId ? ' is-active' : ''}`} key={entry.versionId}>
+                  <button type="button" className="history-row__select" onClick={() => setSelectedHistoryVersionId(entry.versionId)}>
+                    <span>{formatTimestamp(entry.savedAt)}</span>
+                    <small>{entry.savedByName || entry.versionId.slice(0, 8)}</small>
+                  </button>
+                  <div className="history-row__actions">
+                    <button type="button" onClick={() => setSelectedHistoryVersionId(entry.versionId)}>
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => restoreHistoryVersion(entry)}
+                      disabled={restoreState === entry.versionId || !canEditSelectedProfile || (authState.dataSource === 'database' && !authState.user)}
+                    >
+                      {restoreState === entry.versionId ? 'Restoring...' : 'Restore'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {selectedHistoryEntry ? (
+              <div className="history-detail-card">
+                <div className="history-detail-card__head">
+                  <div>
+                    <p className="card-label">Selected Snapshot</p>
+                    <h3>{formatTimestamp(selectedHistoryEntry.savedAt)}</h3>
+                  </div>
+                  {savedDraftMeta?.versionId === selectedHistoryEntry.versionId ? <Chip variant="flat">Current Saved Draft</Chip> : null}
+                </div>
+
+                <div className="history-detail-card__meta">
+                  <span>Version {selectedHistoryEntry.versionId.slice(0, 8)}</span>
+                  {selectedHistoryEntry.savedByName ? <span>Saved by {selectedHistoryEntry.savedByName}</span> : null}
+                  {historySourceStatus(selectedHistoryEntry, sourceDocument?.meta?.updatedAt) ? (
+                    <span>{historySourceStatus(selectedHistoryEntry, sourceDocument?.meta?.updatedAt)}</span>
+                  ) : null}
+                </div>
+
+                <div className="history-compare-grid">
+                  {selectedHistorySummaryItems.map((item, index) => (
+                    <div className="history-compare-row" key={item.label}>
+                      <dt>{item.label}</dt>
+                      <dd>
+                        <strong>{item.value}</strong>
+                        <span>Snapshot</span>
+                      </dd>
+                      <dd>
+                        <strong>{summaryItems[index]?.value ?? '-'}</strong>
+                        <span>Current</span>
+                      </dd>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedHistoryEntry.content ? (
+                  <pre className="history-json-preview">{JSON.stringify(selectedHistoryContent, null, 2)}</pre>
+                ) : (
+                  <p className="field-help">This older save does not include snapshot content, so only timestamp metadata is available.</p>
+                )}
+
+                <div className="toolbar compact">
+                  <Button
+                    type="button"
+                    variant="bordered"
+                    isDisabled={restoreState === selectedHistoryEntry.versionId || !canEditSelectedProfile || (authState.dataSource === 'database' && !authState.user)}
+                    onPress={() => restoreHistoryVersion(selectedHistoryEntry)}
+                  >
+                    <Undo2 size={16} />
+                    <span>{restoreState === selectedHistoryEntry.versionId ? 'Restoring...' : 'Restore Snapshot'}</span>
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <div className="toolbar compact">
               <Button
                 type="button"

@@ -16,3 +16,7 @@ For the current portfolio/media/profile feature set, make sure these later migra
 - `005_portfolio_project_meta.sql`
 - `006_media_assets.sql`
 - `007_profile_section_visibility.sql`
+- `008_profile_certifications.sql`
+- `009_profile_references.sql`
+- `010_document_draft_authors.sql`
+- `011_profile_resume_share_links.sql`

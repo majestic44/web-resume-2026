@@ -14,12 +14,19 @@ function normalizeHistory(history) {
   return history.map(entry => ({
     versionId: entry.versionId,
     savedAt: entry.savedAt,
-    sourceUpdatedAt: entry.sourceUpdatedAt
+    sourceUpdatedAt: entry.sourceUpdatedAt,
+    savedById: entry.savedById || null,
+    savedByName: entry.savedByName || '',
+    content: entry.content || null
   }));
 }
 
 function createVersionId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isDraftAuthorColumnError(error) {
+  return error?.code === 'ER_BAD_FIELD_ERROR' && /saved_by/i.test(String(error?.message || ''));
 }
 
 async function findDocumentRecord(type, profileSlug) {
@@ -50,50 +57,110 @@ async function readDatabaseDraft(type, slug) {
   if (!document) return { draft: null, history: [] };
 
   const pool = getDatabasePool();
-  const [[draftRow], [historyRows]] = await Promise.all([
-    pool.query(
-      `
-        SELECT version_id, content_json, source_updated_at, saved_at
-        FROM document_drafts
-        WHERE document_id = ?
-        LIMIT 1
-      `,
-      [document.id]
-    ),
-    pool.query(
-      `
-        SELECT version_id, source_updated_at, saved_at
-        FROM document_draft_versions
-        WHERE document_id = ?
-        ORDER BY saved_at DESC, id DESC
-        LIMIT 25
-      `,
-      [document.id]
-    )
-  ]);
+  try {
+    const [[draftRow], [historyRows]] = await Promise.all([
+      pool.query(
+        `
+          SELECT d.version_id, d.content_json, d.source_updated_at, d.saved_at, d.saved_by, u.name AS saved_by_name
+          FROM document_drafts d
+          LEFT JOIN users u ON u.id = d.saved_by
+          WHERE d.document_id = ?
+          LIMIT 1
+        `,
+        [document.id]
+      ),
+      pool.query(
+        `
+          SELECT dv.version_id, dv.content_json, dv.source_updated_at, dv.saved_at, dv.saved_by, u.name AS saved_by_name
+          FROM document_draft_versions dv
+          LEFT JOIN users u ON u.id = dv.saved_by
+          WHERE dv.document_id = ?
+          ORDER BY dv.saved_at DESC, dv.id DESC
+          LIMIT 25
+        `,
+        [document.id]
+      )
+    ]);
 
-  return {
-    draft: draftRow
-      ? {
-          type,
-          slug,
-          content: typeof draftRow.content_json === 'string' ? JSON.parse(draftRow.content_json) : draftRow.content_json,
-          sourceUpdatedAt: draftRow.source_updated_at,
-          savedAt: draftRow.saved_at,
-          versionId: draftRow.version_id
-        }
-      : null,
-    history: normalizeHistory(
-      historyRows.map(row => ({
-        versionId: row.version_id,
-        savedAt: row.saved_at,
-        sourceUpdatedAt: row.source_updated_at
-      }))
-    )
-  };
+    return {
+      draft: draftRow
+        ? {
+            type,
+            slug,
+            content: typeof draftRow.content_json === 'string' ? JSON.parse(draftRow.content_json) : draftRow.content_json,
+            sourceUpdatedAt: draftRow.source_updated_at,
+            savedAt: draftRow.saved_at,
+            versionId: draftRow.version_id,
+            savedById: draftRow.saved_by || null,
+            savedByName: draftRow.saved_by_name || ''
+          }
+        : null,
+      history: normalizeHistory(
+        historyRows.map(row => ({
+          versionId: row.version_id,
+          savedAt: row.saved_at,
+          sourceUpdatedAt: row.source_updated_at,
+          savedById: row.saved_by || null,
+          savedByName: row.saved_by_name || '',
+          content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
+        }))
+      )
+    };
+  } catch (error) {
+    if (!isDraftAuthorColumnError(error)) {
+      throw error;
+    }
+
+    const [[draftRow], [historyRows]] = await Promise.all([
+      pool.query(
+        `
+          SELECT version_id, content_json, source_updated_at, saved_at
+          FROM document_drafts
+          WHERE document_id = ?
+          LIMIT 1
+        `,
+        [document.id]
+      ),
+      pool.query(
+        `
+          SELECT version_id, content_json, source_updated_at, saved_at
+          FROM document_draft_versions
+          WHERE document_id = ?
+          ORDER BY saved_at DESC, id DESC
+          LIMIT 25
+        `,
+        [document.id]
+      )
+    ]);
+
+    return {
+      draft: draftRow
+        ? {
+            type,
+            slug,
+            content: typeof draftRow.content_json === 'string' ? JSON.parse(draftRow.content_json) : draftRow.content_json,
+            sourceUpdatedAt: draftRow.source_updated_at,
+            savedAt: draftRow.saved_at,
+            versionId: draftRow.version_id,
+            savedById: null,
+            savedByName: ''
+          }
+        : null,
+      history: normalizeHistory(
+        historyRows.map(row => ({
+          versionId: row.version_id,
+          savedAt: row.saved_at,
+          sourceUpdatedAt: row.source_updated_at,
+          savedById: null,
+          savedByName: '',
+          content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
+        }))
+      )
+    };
+  }
 }
 
-async function saveDatabaseDraft({ type, slug, content, sourceUpdatedAt = null }) {
+async function saveDatabaseDraft({ type, slug, content, sourceUpdatedAt = null, savedById = null }) {
   const document = await findDocumentRecord(type, slug);
   if (!document) return null;
 
@@ -104,26 +171,54 @@ async function saveDatabaseDraft({ type, slug, content, sourceUpdatedAt = null }
 
   try {
     await connection.beginTransaction();
-    await connection.query(
-      `
-        INSERT INTO document_drafts (document_id, content_json, source_updated_at, saved_at, version_id)
-        VALUES (?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          content_json = VALUES(content_json),
-          source_updated_at = VALUES(source_updated_at),
-          saved_at = VALUES(saved_at),
-          version_id = VALUES(version_id)
-      `,
-      [document.id, JSON.stringify(content), sourceUpdatedAt, savedAt, versionId]
-    );
+    try {
+      await connection.query(
+        `
+          INSERT INTO document_drafts (document_id, content_json, source_updated_at, saved_at, version_id, saved_by)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            content_json = VALUES(content_json),
+            source_updated_at = VALUES(source_updated_at),
+            saved_at = VALUES(saved_at),
+            version_id = VALUES(version_id),
+            saved_by = VALUES(saved_by)
+        `,
+        [document.id, JSON.stringify(content), sourceUpdatedAt, savedAt, versionId, savedById]
+      );
 
-    await connection.query(
-      `
-        INSERT INTO document_draft_versions (document_id, version_id, content_json, source_updated_at, saved_at)
-        VALUES (?, ?, ?, ?, ?)
-      `,
-      [document.id, versionId, JSON.stringify(content), sourceUpdatedAt, savedAt]
-    );
+      await connection.query(
+        `
+          INSERT INTO document_draft_versions (document_id, version_id, content_json, source_updated_at, saved_at, saved_by)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        [document.id, versionId, JSON.stringify(content), sourceUpdatedAt, savedAt, savedById]
+      );
+    } catch (error) {
+      if (!isDraftAuthorColumnError(error)) {
+        throw error;
+      }
+
+      await connection.query(
+        `
+          INSERT INTO document_drafts (document_id, content_json, source_updated_at, saved_at, version_id)
+          VALUES (?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            content_json = VALUES(content_json),
+            source_updated_at = VALUES(source_updated_at),
+            saved_at = VALUES(saved_at),
+            version_id = VALUES(version_id)
+        `,
+        [document.id, JSON.stringify(content), sourceUpdatedAt, savedAt, versionId]
+      );
+
+      await connection.query(
+        `
+          INSERT INTO document_draft_versions (document_id, version_id, content_json, source_updated_at, saved_at)
+          VALUES (?, ?, ?, ?, ?)
+        `,
+        [document.id, versionId, JSON.stringify(content), sourceUpdatedAt, savedAt]
+      );
+    }
 
     await connection.query(
       `
@@ -148,6 +243,42 @@ async function saveDatabaseDraft({ type, slug, content, sourceUpdatedAt = null }
   }
 
   return readDatabaseDraft(type, slug);
+}
+
+async function restoreDatabaseDraft(type, slug, versionId, actorUserId = null) {
+  const document = await findDocumentRecord(type, slug);
+  if (!document) return { status: 'missing_document' };
+
+  const pool = getDatabasePool();
+  const [[historyRow]] = await pool.query(
+    `
+      SELECT content_json, source_updated_at
+      FROM document_draft_versions
+      WHERE document_id = ?
+        AND version_id = ?
+      LIMIT 1
+    `,
+    [document.id, versionId]
+  );
+
+  if (!historyRow) {
+    return { status: 'missing_version' };
+  }
+
+  const content = typeof historyRow.content_json === 'string'
+    ? JSON.parse(historyRow.content_json)
+    : historyRow.content_json;
+
+  return {
+    status: 'restored',
+    ...(await saveDatabaseDraft({
+      type,
+      slug,
+      content,
+      sourceUpdatedAt: historyRow.source_updated_at,
+      savedById: actorUserId
+    }))
+  };
 }
 
 async function deleteDatabaseDraft(type, slug) {
@@ -253,20 +384,34 @@ export async function readDraftBundle(type, slug) {
   if (!isDatabaseEnabled()) {
     const draft = await readFileDraft(type, slug);
     const history = await readFileDraftHistory(type, slug);
-    return { draft, history: normalizeHistory(history) };
+    return {
+      draft: draft ? {
+        ...draft,
+        savedById: draft.savedById || null,
+        savedByName: draft.savedByName || ''
+      } : null,
+      history: normalizeHistory(history)
+    };
   }
 
   return readDatabaseDraft(type, slug);
 }
 
-export async function saveDraftBundle({ type, slug, content, sourceUpdatedAt = null }) {
+export async function saveDraftBundle({ type, slug, content, sourceUpdatedAt = null, savedById = null, savedByName = '' }) {
   if (!isDatabaseEnabled()) {
-    const draft = await saveFileDraft({ type, slug, content, sourceUpdatedAt });
+    const draft = await saveFileDraft({ type, slug, content, sourceUpdatedAt, savedById, savedByName });
     const history = await readFileDraftHistory(type, slug);
-    return { draft, history: normalizeHistory(history) };
+    return {
+      draft: {
+        ...draft,
+        savedById: draft.savedById || null,
+        savedByName: draft.savedByName || ''
+      },
+      history: normalizeHistory(history)
+    };
   }
 
-  return saveDatabaseDraft({ type, slug, content, sourceUpdatedAt });
+  return saveDatabaseDraft({ type, slug, content, sourceUpdatedAt, savedById });
 }
 
 export async function deleteDraftBundle(type, slug) {
@@ -284,4 +429,28 @@ export async function publishDraftBundle(type, slug, actorUserId = null) {
   }
 
   return publishDatabaseDraft(type, slug, actorUserId);
+}
+
+export async function restoreDraftBundle(type, slug, versionId, actorUserId = null, actorUserName = '') {
+  if (!isDatabaseEnabled()) {
+    const history = await readFileDraftHistory(type, slug);
+    const entry = history.find(item => item.versionId === versionId);
+    if (!entry?.content) {
+      return { status: 'missing_version' };
+    }
+
+    return {
+      status: 'restored',
+      ...(await saveDraftBundle({
+        type,
+        slug,
+        content: entry.content,
+        sourceUpdatedAt: entry.sourceUpdatedAt || null,
+        savedById: actorUserId,
+        savedByName: actorUserName
+      }))
+    };
+  }
+
+  return restoreDatabaseDraft(type, slug, versionId, actorUserId);
 }

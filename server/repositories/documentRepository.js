@@ -35,7 +35,7 @@ export async function listProfiles() {
   const pool = getDatabasePool();
   const [rows] = await pool.query(
     `
-      SELECT p.slug, p.display_name, p.headline, d.template, d.content_json
+      SELECT p.id, p.slug, p.display_name, p.headline, d.template, d.content_json
            , p.show_documents, p.show_portfolio, p.show_certifications, p.show_references
       FROM profiles p
       LEFT JOIN documents d
@@ -51,6 +51,7 @@ export async function listProfiles() {
     const content = typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json;
 
     return {
+      id: row.id,
       slug: row.slug,
       name: row.display_name,
       label: row.headline || 'Professional Profile',
@@ -64,6 +65,21 @@ export async function listProfiles() {
       ...profileLinks(row.slug)
     };
   });
+}
+
+export async function listProfilesForUser(user) {
+  const profiles = await listProfiles();
+
+  if (!isDatabaseEnabled()) {
+    return profiles;
+  }
+
+  if (user?.editableProfiles?.includes('*')) {
+    return profiles;
+  }
+
+  const allowedSlugs = new Set(user?.editableProfiles || []);
+  return profiles.filter(profile => allowedSlugs.has(profile.slug));
 }
 
 export async function readDocument(type, profileSlug) {

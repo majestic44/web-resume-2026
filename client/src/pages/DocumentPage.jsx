@@ -2,35 +2,43 @@ import { useEffect, useMemo, useState } from 'react';
 import { normalizeCoverLetterData, normalizeResumeData } from '../lib/resume.js';
 import { getTemplateDefinition } from '../templates/registry.js';
 
-export function DocumentPage({ pathname }) {
+export function DocumentPage({ pathname, shared = false }) {
   const [state, setState] = useState({ status: 'loading', document: null });
-  const { type, slug } = useMemo(() => {
+  const { type, slug, token } = useMemo(() => {
+    if (shared) {
+      const [, , , shareToken] = pathname.split('/');
+      return { type: 'resume', slug: '', token: shareToken };
+    }
+
     const [, route, profileSlug] = pathname.split('/');
-    return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug };
-  }, [pathname]);
+    return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug, token: '' };
+  }, [pathname, shared]);
 
   useEffect(() => {
-    fetch(`/api/documents/${type}/${slug}`)
+    const endpoint = shared ? `/api/shared/resume/${token}` : `/api/internal/documents/${type}/${slug}`;
+
+    fetch(endpoint)
       .then(response => {
         if (!response.ok) throw new Error('Document not found');
         return response.json();
       })
       .then(document => setState({ status: 'ready', document }))
       .catch(error => setState({ status: 'error', error }));
-  }, [type, slug]);
+  }, [shared, token, type, slug]);
 
   if (state.status === 'loading') {
-    return <DocumentFrame title="Loading"><p className="muted">Loading document...</p></DocumentFrame>;
+    return <DocumentFrame title="Loading" shared={shared}><p className="muted">Loading document...</p></DocumentFrame>;
   }
 
   if (state.status === 'error') {
-    return <DocumentFrame title="Not Found"><p>That document could not be loaded.</p></DocumentFrame>;
+    return <DocumentFrame title="Not Found" shared={shared}><p>That document could not be loaded.</p></DocumentFrame>;
   }
 
   const meta = state.document.meta;
+  const title = meta.name || state.document.content?.name || 'Shared Resume';
 
   return (
-    <DocumentFrame title={meta.name} subtitle={type === 'resume' ? 'Professional Resume' : 'Cover Letter'} template={meta.template}>
+    <DocumentFrame title={title} subtitle={shared ? 'Shared Resume' : (type === 'resume' ? 'Professional Resume' : 'Cover Letter')} template={meta.template} shared={shared}>
       {type === 'resume' ? (
         <ResumeView data={state.document.content} template={meta.template} />
       ) : (
@@ -40,16 +48,16 @@ export function DocumentPage({ pathname }) {
   );
 }
 
-function DocumentFrame({ title, subtitle = 'Document', template = 'modern', children }) {
+function DocumentFrame({ title, subtitle = 'Document', template = 'modern', shared = false, children }) {
   return (
     <div className={`site-shell template-shell template-${template}`.trim()}>
       <header className="site-topbar no-print">
-        <a className="site-brand" href="/">
+        <div className="site-brand">
           <strong>{title}</strong>
           <span>{subtitle}</span>
-        </a>
+        </div>
         <nav>
-          <a href="/">Profiles</a>
+          {!shared ? <a href="/dashboard">Dashboard</a> : null}
           <button type="button" onClick={() => window.print()}>Export PDF</button>
         </nav>
       </header>

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attachCurrentUser } from './middleware/auth.js';
 import { apiRouter } from './routes/api.js';
+import { hasActiveSharedResume } from './repositories/shareLinkRepository.js';
 
 dotenv.config();
 
@@ -27,6 +28,25 @@ app.use(attachCurrentUser);
 app.use('/api', apiRouter);
 app.use(express.static(publicDir));
 app.use('/app', express.static(clientDistDir));
+
+app.get('/shared/resume/:token', async (req, res) => {
+  try {
+    res.set({
+      'Cache-Control': 'no-store, private',
+      'Referrer-Policy': 'no-referrer'
+    });
+
+    if (!await hasActiveSharedResume(req.params.token)) {
+      res.status(404).send('Not found');
+      return;
+    }
+
+    res.sendFile(path.join(clientDistDir, 'index.html'));
+  } catch {
+    // Treat lookup failures as not found so a share URL never reveals profile state.
+    res.status(404).send('Not found');
+  }
+});
 
 app.get('*', (req, res) => {
   const appIndex = path.join(clientDistDir, 'index.html');

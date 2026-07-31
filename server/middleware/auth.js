@@ -70,6 +70,34 @@ export function requireMemberManager(req, res, next) {
   next();
 }
 
+export function requireInternalUser(req, res, next) {
+  if (getDataSource() !== 'database') {
+    next();
+    return;
+  }
+
+  if (!req.currentUser) {
+    res.status(401).json({ error: 'Sign in is required.' });
+    return;
+  }
+
+  next();
+}
+
+export function requireInternalProfileAccess(req, res, next) {
+  if (getDataSource() !== 'database') {
+    next();
+    return;
+  }
+
+  if (!canEditProfile(req.currentUser, req.params.slug)) {
+    res.status(403).json({ error: 'You do not have permission to view this profile.' });
+    return;
+  }
+
+  next();
+}
+
 export async function destroySession(req, res) {
   if (req.sessionToken) {
     await deleteUserSession(req.sessionToken);

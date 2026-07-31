@@ -5,11 +5,11 @@ import { Dashboard } from './pages/Dashboard.jsx';
 import { DocumentPage } from './pages/DocumentPage.jsx';
 import { Editor } from './pages/Editor.jsx';
 import { Login } from './pages/Login.jsx';
+import { LandingPage } from './pages/LandingPage.jsx';
 import { Members } from './pages/Members.jsx';
 import { PortfolioAdmin } from './pages/PortfolioAdmin.jsx';
 import { ProfilePublic } from './pages/ProfilePublic.jsx';
 import { ProfilesAdmin } from './pages/ProfilesAdmin.jsx';
-import { PublicDirectory } from './pages/PublicDirectory.jsx';
 import { Templates } from './pages/Templates.jsx';
 
 const routes = {
@@ -51,23 +51,6 @@ export function App() {
       });
   }, []);
 
-  if (pathname === '/') {
-    return <PublicDirectory />;
-  }
-
-  if (pathname.startsWith('/profile/')) {
-    return <ProfilePublic pathname={pathname} />;
-  }
-
-  if (pathname.startsWith('/resume/') || pathname.startsWith('/cover-letter/')) {
-    return <DocumentPage pathname={pathname} />;
-  }
-
-  const Page = routes[pathname] || Dashboard;
-  const visibleNavItems = navItems.filter(item => {
-    if (!['/members', '/profiles'].includes(item.href)) return true;
-    return authState.dataSource === 'database' && ['owner', 'admin'].includes(authState.user?.role);
-  });
   const pageProps = {
     authState,
     refreshAuth: () =>
@@ -80,6 +63,36 @@ export function App() {
         }))
   };
 
+  if (pathname.startsWith('/shared/resume/')) {
+    return <DocumentPage pathname={pathname} shared />;
+  }
+
+  if (pathname === '/') {
+    return <LandingPage {...pageProps} />;
+  }
+
+  if (!authState.ready) {
+    return <div className="site-shell directory-shell"><main className="directory-page"><p className="muted">Loading secure workspace...</p></main></div>;
+  }
+
+  if (authState.dataSource === 'database' && !authState.user && pathname !== '/login') {
+    return <Login {...pageProps} />;
+  }
+
+  if (pathname.startsWith('/profile/')) {
+    return <ProfilePublic pathname={pathname} />;
+  }
+
+  if (pathname.startsWith('/resume/') || pathname.startsWith('/cover-letter/')) {
+    return <DocumentPage pathname={pathname} />;
+  }
+
+  const Page = routes[pathname] || Dashboard;
+  const visibleNavItems = navItems.filter(item => {
+    if (item.href === '/login') return !authState.user;
+    if (!['/members', '/profiles'].includes(item.href)) return true;
+    return authState.dataSource === 'database' && ['owner', 'admin'].includes(authState.user?.role);
+  });
   return (
     <div className="app-shell lg:grid lg:min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="sidebar flex flex-col gap-7 bg-slate-950 px-6 py-6 text-slate-50 lg:min-h-screen">

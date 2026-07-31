@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, ExternalLink, FileText, MailOpen } from 'lucide-react';
+import { Award, BriefcaseBusiness, ExternalLink, FileText, Mail, MailOpen, Phone, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function getInitials(name) {
@@ -32,6 +32,27 @@ function getProgressLabel(value) {
 
 function tagItems(skills) {
   return Array.isArray(skills) ? skills.filter(Boolean) : [];
+}
+
+function getCertificationStatusLabel(value) {
+  return ({
+    active: 'Active',
+    in_progress: 'In Progress',
+    expired: 'Expired'
+  })[value] || 'Active';
+}
+
+function formatCredentialDate(value) {
+  if (!value) return 'Not set';
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 function uniqueValues(values) {
@@ -73,6 +94,8 @@ export function ProfilePublic({ pathname }) {
   const [lightboxImage, setLightboxImage] = useState(null);
   const profile = state.payload?.profile || null;
   const portfolioItems = state.payload?.portfolioItems || [];
+  const certifications = state.payload?.certifications || [];
+  const references = state.payload?.references || [];
   const initials = getInitials(profile?.name);
   const sectionVisibility = profile?.sectionVisibility || {
     documents: true,
@@ -87,7 +110,7 @@ export function ProfilePublic({ pathname }) {
       return;
     }
 
-    fetch(`/api/profiles/${slug}/public`)
+    fetch(`/api/internal/profiles/${slug}`)
       .then(response => {
         if (!response.ok) throw new Error('Profile not found');
         return response.json();
@@ -174,12 +197,12 @@ export function ProfilePublic({ pathname }) {
   return (
     <div className="site-shell directory-shell">
       <header className="site-topbar no-print">
-        <a className="site-brand" href="/">
+          <a className="site-brand" href="/dashboard">
           <strong>{profile.name}</strong>
           <span>Professional Profile</span>
         </a>
         <nav>
-          <a href="/">Profiles</a>
+          <a href="/dashboard">Dashboard</a>
           {sectionVisibility.documents ? <a href={profile.resumeLink}>Resume</a> : null}
           {sectionVisibility.documents ? <a href={profile.coverLetterLink}>Cover Letter</a> : null}
         </nav>
@@ -459,12 +482,51 @@ export function ProfilePublic({ pathname }) {
                 <p className="eyebrow">Certifications</p>
                 <h2>Certifications and licenses</h2>
               </div>
-              <p>This section is enabled for future credentials and supporting documents.</p>
+              <p>{certifications.length} credential{certifications.length === 1 ? '' : 's'} available.</p>
             </div>
-            <section className="directory-empty-state">
-              <h3>Certifications section is ready</h3>
-              <p>Professional licenses, safety certifications, training records, and supporting files can be surfaced here when you decide to add that feature data.</p>
-            </section>
+
+            {certifications.length ? (
+              <section className="public-certification-grid" aria-label="Certifications and licenses">
+                {certifications.map(item => (
+                  <article className="public-certification-card" key={item.id}>
+                    <div className="public-certification-card__head">
+                      <div className="public-certification-card__icon">
+                        <Award size={18} />
+                      </div>
+                      <div>
+                        <p className="card-label">{getCertificationStatusLabel(item.status)}</p>
+                        <h3>{item.title}</h3>
+                        <p>{item.issuer}</p>
+                      </div>
+                    </div>
+
+                    <div className="public-certification-card__meta">
+                      <span>Issued: {formatCredentialDate(item.issuedOn)}</span>
+                      {item.expiresOn ? <span>Expires: {formatCredentialDate(item.expiresOn)}</span> : null}
+                      {item.credentialId ? <span>ID: {item.credentialId}</span> : null}
+                    </div>
+
+                    {item.notes ? <p className="public-certification-card__notes">{item.notes}</p> : null}
+
+                    {item.credentialUrl ? (
+                      <a className="portfolio-card__asset-link" href={item.credentialUrl} target="_blank" rel="noreferrer">
+                        <span className="portfolio-card__asset-main">
+                          <span className="portfolio-card__asset-kind">Verification</span>
+                          <strong>Open credential link</strong>
+                          <small>{assetDetailLabel(item.credentialUrl)}</small>
+                        </span>
+                        <ExternalLink size={15} />
+                      </a>
+                    ) : null}
+                  </article>
+                ))}
+              </section>
+            ) : (
+              <section className="directory-empty-state">
+                <h3>No certifications added yet</h3>
+                <p>Professional licenses, safety certifications, training records, and supporting credential links will appear here when they are added.</p>
+              </section>
+            )}
           </section>
         ) : null}
 
@@ -475,12 +537,67 @@ export function ProfilePublic({ pathname }) {
                 <p className="eyebrow">References</p>
                 <h2>References</h2>
               </div>
-              <p>This section can be used for public references or reference guidance later.</p>
+              <p>{references.length} reference{references.length === 1 ? '' : 's'} available.</p>
             </div>
+
+            {references.length ? (
+              <section className="public-reference-grid" aria-label="Professional references">
+                {references.map(item => {
+                  const subhead = [item.title, item.company].filter(Boolean).join(' / ');
+
+                  return (
+                    <article className="public-reference-card" key={item.id}>
+                      <div className="public-reference-card__head">
+                        <div className="public-reference-card__icon">
+                          <Users size={18} />
+                        </div>
+                        <div>
+                          <p className="card-label">{item.relationshipLabel || 'Professional Reference'}</p>
+                          <h3>{item.name}</h3>
+                          {subhead ? <p>{subhead}</p> : null}
+                        </div>
+                      </div>
+
+                      {item.referenceText ? <p className="public-reference-card__text">{item.referenceText}</p> : null}
+                      {item.contactNote ? <p className="public-reference-card__note">{item.contactNote}</p> : null}
+
+                      {item.email || item.phone ? (
+                        <div className="public-reference-card__links">
+                          {item.email ? (
+                            <a className="portfolio-card__asset-link" href={`mailto:${item.email}`}>
+                              <span className="portfolio-card__asset-main">
+                                <span className="portfolio-card__asset-kind">Email</span>
+                                <strong>{item.email}</strong>
+                              </span>
+                              <Mail size={15} />
+                            </a>
+                          ) : null}
+                          {item.phone ? (
+                            <a className="portfolio-card__asset-link" href={`tel:${item.phone}`}>
+                              <span className="portfolio-card__asset-main">
+                                <span className="portfolio-card__asset-kind">Phone</span>
+                                <strong>{item.phone}</strong>
+                              </span>
+                              <Phone size={15} />
+                            </a>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </section>
+            ) : (
+              <section className="directory-empty-state">
+                <h3>No references added yet</h3>
+                <p>Reference contacts, recommendation details, or an available-upon-request note will appear here when they are added.</p>
+              </section>
+            )}
+            {true ? null : (
             <section className="directory-empty-state">
-              <h3>References section is enabled</h3>
+              <h3>No references added yet</h3>
               <p>Reference contacts, recommendation details, or an “available upon request” block can be shown here once that content is added.</p>
-            </section>
+            </section>)}
           </section>
         ) : null}
       </main>

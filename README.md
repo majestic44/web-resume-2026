@@ -2,7 +2,7 @@
 
 This branch starts a clean Node/Express + Vite/React app for a private household resume editor backed by MariaDB.
 
-The old static pages have been removed from the active app path. The current resume content is kept as seed JSON in `server/data/seeds/`, and the public resume/directory pages are now rendered by React.
+The old static pages have been removed from the active app path. The current resume content is kept as seed JSON in `server/data/seeds/`, and React renders authenticated CMS previews plus isolated token-based shared resumes.
 
 ## Structure
 
@@ -35,28 +35,26 @@ http://localhost:5173
 
 Useful routes:
 
-- `/` - profile directory
-- `/profile/jareth`
-- `/login` - sign in
+- `/` - private landing page with modal-based sign-in
+- `/shared/resume/:token` - isolated shared resume
+- `/login` - compatibility redirect to the landing-page sign-in modal
 - `/dashboard` - admin dashboard
 - `/editor` - resume draft editor
 - `/portfolio` - dedicated media library
 - `/profiles` - owner/admin profile management
 - `/members` - owner/admin access management
 - `/templates` - template registry
-- `/resume/jareth`
-- `/resume/angel`
-- `/cover-letter/jareth`
-- `/cover-letter/angel`
+- `/profile/:slug` - authenticated profile preview
+- `/resume/:slug` - authenticated resume preview
+- `/cover-letter/:slug` - authenticated cover-letter preview
 
 API routes run through Express on port `3000` during local development:
 
 - `/api/health`
-- `/api/profiles`
-- `/api/profiles/:slug/public`
-- `/api/profiles/:slug/portfolio`
-- `/api/documents/resume/jareth`
-- `/api/documents/cover-letter/jareth`
+- `/api/internal/profiles`
+- `/api/internal/profiles/:slug`
+- `/api/internal/documents/:type/:slug`
+- `/api/shared/resume/:token`
 - `/api/drafts/resume/:slug`
 - `/api/drafts/cover-letter/:slug`
 - `/api/drafts/resume/:slug/publish`
@@ -113,8 +111,9 @@ The editor now supports a full draft workflow:
 1. Open `/editor`
 2. Choose a profile and switch between `Resume` or `Cover Letter`
 3. Make changes and use **Save Draft** to store the latest working copy
-4. Use **Publish Live** to push the saved draft to the live public document
-5. Use **Reset** to throw away the active draft and return to the current live document
+4. Use **Publish Live** to push the saved draft to the live resume or cover letter
+5. Review **Version History** in the editor sidebar to inspect older saved snapshots and restore one as the current draft
+6. Use **Reset** to throw away the active draft and return to the current live document
 
 Behavior by data source:
 
@@ -130,6 +129,8 @@ Behavior by data source:
 ## Authentication
 
 Authentication is active when `DATA_SOURCE=database`.
+
+The `/` route is a privacy-safe application landing page. It never requests or displays household member, profile, slug, or document data. Signed-out visitors can sign in through the HeroUI modal; signed-in visitors see an **Open Dashboard** action and a small account status indicator. The legacy `/login` route redirects to `/?signin=1` so it opens the same modal rather than maintaining a separate sign-in form.
 
 - `POST /api/auth/login` creates an HttpOnly session cookie
 - `GET /api/auth/me` returns the current signed-in user
@@ -156,27 +157,22 @@ Owner/admin accounts can manage profiles from `/profiles`.
 - Profile updates also keep the linked resume/cover letter template metadata in sync
 - Profile updates can also control which sections appear on the public profile hub
 
-New profiles show up in:
+New profiles show up in the editor profile selector and the member access assignment screen. They are not discoverable anonymously.
 
-- the public directory
-- the public profile route
-- the editor profile selector
-- the member access assignment screen
-
-## Public Profile + Portfolio
+## Authenticated Profile Preview + Portfolio
 
 The first portfolio foundation is now in place.
 
-- Public profiles are available at `/profile/:slug`
-- Each public profile can show:
+- Signed-in users can preview profiles at `/profile/:slug` when their role grants access.
+- Each profile can show:
   - profile photo
   - headline
   - summary
   - resume and cover letter document cards
   - public portfolio items
-  - optional certifications/licenses placeholder section
-  - optional references placeholder section
-- Portfolio cards on the public profile page now support:
+  - optional certifications/licenses cards
+  - optional references cards
+- Portfolio cards in profile previews now support:
   - tag filtering
   - project-type filtering
   - progress filtering
@@ -191,9 +187,28 @@ The first portfolio foundation is now in place.
   - `POST /api/admin/profiles/:slug/portfolio`
   - `PATCH /api/admin/profiles/:slug/portfolio/:itemId`
   - `DELETE /api/admin/profiles/:slug/portfolio/:itemId`
+  - `GET /api/admin/profiles/:slug/certifications`
+  - `POST /api/admin/profiles/:slug/certifications`
+  - `PATCH /api/admin/profiles/:slug/certifications/:certificationId`
+  - `DELETE /api/admin/profiles/:slug/certifications/:certificationId`
+  - `GET /api/admin/profiles/:slug/references`
+  - `POST /api/admin/profiles/:slug/references`
+  - `PATCH /api/admin/profiles/:slug/references/:referenceId`
+  - `DELETE /api/admin/profiles/:slug/references/:referenceId`
 
 Portfolio editing from `/editor` requires `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
 Media uploads from `/portfolio` require `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
+Certification and reference editing from `/editor` require `DATA_SOURCE=database` plus an `owner`, `admin`, or `editor` account with access to the selected profile.
+
+## Private Resume Sharing
+
+Resume sharing is available only in `DATA_SOURCE=database` mode. Authorized profile managers can use **Share Resume** in `/editor` to create, copy, regenerate, or disable a link.
+
+- Shared URLs use `/shared/resume/:token`, where the token is an opaque 256-bit random value.
+- Only a SHA-256 hash of the token is stored in MariaDB; the complete URL is returned once when generated.
+- Regenerating or disabling a link immediately makes prior URLs return `404`.
+- Shared pages contain only that resume and PDF export. They do not link to the household directory or CMS.
+- Cover letters, portfolios, certifications, references, and other household profiles are not shared by this feature.
 
 ## Member Access
 
@@ -226,10 +241,14 @@ Recent migrations to make sure are applied before testing newer profile/portfoli
 - `005_portfolio_project_meta.sql`
 - `006_media_assets.sql`
 - `007_profile_section_visibility.sql`
+- `008_profile_certifications.sql`
+- `009_profile_references.sql`
+- `010_document_draft_authors.sql`
+- `011_profile_resume_share_links.sql`
 
 ## PDF Export
 
-Use the **Export PDF** button or the browser print dialog on public resume/cover letter pages.
+Use the **Export PDF** button or the browser print dialog on an authenticated document preview or a shared resume page.
 Choose:
 
 - Destination: Save as PDF
@@ -251,7 +270,8 @@ After deploying to Plesk:
 
 1. Open `/login` and sign in with the seeded admin account
 2. Open `/profiles` and create a new profile
-3. Confirm the new profile appears in `/`, `/editor`, and `/members`
+3. Confirm the new profile appears in `/editor` and `/members`, but not on the anonymous landing page
 4. Open `/editor`, save a draft, and publish it
-5. Open `/resume/{slug}` and verify the live page updated
-6. Use **Export PDF** on the resume and cover letter pages to verify print output
+5. Create a resume share link from `/editor`, then open `/shared/resume/{token}` in a signed-out browser and verify the live page updated
+6. Regenerate and disable the link, confirming the old URLs return `404`
+7. Use **Export PDF** on the shared resume page to verify print output

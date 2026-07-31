@@ -53,7 +53,7 @@ export async function readDraftHistory(type, slug) {
   return Array.isArray(history) ? history : [];
 }
 
-export async function saveDraft({ type, slug, content, sourceUpdatedAt = null }) {
+export async function saveDraft({ type, slug, content, sourceUpdatedAt = null, savedById = null, savedByName = '' }) {
   await ensureDraftDirectory(type);
 
   const now = new Date().toISOString();
@@ -63,7 +63,9 @@ export async function saveDraft({ type, slug, content, sourceUpdatedAt = null })
     content,
     sourceUpdatedAt,
     savedAt: now,
-    versionId: createVersionId()
+    versionId: createVersionId(),
+    savedById,
+    savedByName: String(savedByName || '').trim()
   };
 
   await fs.writeFile(draftFilePath(type, slug), JSON.stringify(nextDraft, null, 2));
@@ -74,7 +76,9 @@ export async function saveDraft({ type, slug, content, sourceUpdatedAt = null })
       versionId: nextDraft.versionId,
       savedAt: nextDraft.savedAt,
       sourceUpdatedAt: nextDraft.sourceUpdatedAt,
-      content
+      content,
+      savedById: nextDraft.savedById,
+      savedByName: nextDraft.savedByName
     },
     ...history
   ].slice(0, historyLimit);

@@ -5,21 +5,40 @@ import multer from 'multer';
 import { fileURLToPath } from 'node:url';
 import { getDataSource } from '../config/app.js';
 import { getDatabasePool } from '../config/database.js';
-import { destroySession, requireDraftEditor, requireMemberManager, sessionCookieName } from '../middleware/auth.js';
+import { destroySession, requireDraftEditor, requireInternalProfileAccess, requireInternalUser, requireMemberManager, sessionCookieName } from '../middleware/auth.js';
 import { createMemberAccount, listMembers, updateMemberAccount } from '../repositories/adminRepository.js';
 import { authenticateUser, createUserSession } from '../repositories/authRepository.js';
-import { listProfiles, readDocument } from '../repositories/documentRepository.js';
+import {
+  createCertification,
+  deleteCertification,
+  listManagedCertifications,
+  updateCertification
+} from '../repositories/certificationRepository.js';
+import { listProfiles, listProfilesForUser, readDocument } from '../repositories/documentRepository.js';
 import { createProfileMedia, deleteProfileMedia, listProfileMedia, replaceProfileMedia } from '../repositories/mediaRepository.js';
 import {
   createPortfolioItem,
   deletePortfolioItem,
   listManagedPortfolio,
-  listPublicPortfolio,
   readPublicProfile,
   updatePortfolioItem
 } from '../repositories/portfolioRepository.js';
-import { deleteDraftBundle, publishDraftBundle, readDraftBundle, saveDraftBundle } from '../repositories/draftRepository.js';
+import {
+  createReference,
+  deleteReference,
+  listManagedReferences,
+  updateReference
+} from '../repositories/referenceRepository.js';
+import { deleteDraftBundle, publishDraftBundle, readDraftBundle, restoreDraftBundle, saveDraftBundle } from '../repositories/draftRepository.js';
 import { createProfile, listManagedProfiles, updateProfile } from '../repositories/profileRepository.js';
+import { canEditProfile } from '../repositories/authRepository.js';
+import {
+  createOrRotateResumeShareLink,
+  findShareLinkProfile,
+  readResumeShareLink,
+  resolveSharedResume,
+  revokeResumeShareLink
+} from '../repositories/shareLinkRepository.js';
 import { serializeCookie } from '../services/cookieStore.js';
 
 export const apiRouter = express.Router();
@@ -61,8 +80,49 @@ function respondIfMissingSchema(error, res, message) {
   return true;
 }
 
+function shareUrlForRequest(req, token) {
+  const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
+  const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
+  return `${baseUrl}/shared/resume/${token}`;
+}
+
+async function requireShareLinkManager(req, res, next) {
+  try {
+    if (getDataSource() !== 'database') {
+      res.status(400).json({ error: 'Resume sharing requires DATA_SOURCE=database.' });
+      return;
+    }
+
+    if (!req.currentUser) {
+      res.status(403).json({ error: 'You do not have permission to manage resume sharing.' });
+      return;
+    }
+
+    const profile = await findShareLinkProfile(req.params.profileId);
+    if (!profile) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    if (!canEditProfile(req.currentUser, profile.slug)) {
+      res.status(403).json({ error: 'You do not have permission to manage resume sharing for this profile.' });
+      return;
+    }
+
+    req.shareLinkProfile = profile;
+    next();
+  } catch (error) {
+    if (error.message === 'A valid profile id is required.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+}
+
 function registerDraftRoutes(type) {
-  apiRouter.get(`/drafts/${type}/:slug`, async (req, res, next) => {
+  apiRouter.get(`/drafts/${type}/:slug`, requireInternalProfileAccess, async (req, res, next) => {
     try {
       const sourceDocument = await readDocument(type, req.params.slug);
 
@@ -97,7 +157,9 @@ function registerDraftRoutes(type) {
         type,
         slug: req.params.slug,
         content,
-        sourceUpdatedAt: sourceDocument.meta?.updatedAt || null
+        sourceUpdatedAt: sourceDocument.meta?.updatedAt || null,
+        savedById: req.currentUser?.id || null,
+        savedByName: req.currentUser?.name || ''
       });
 
       res.status(201).json(bundle);
@@ -150,6 +212,39 @@ function registerDraftRoutes(type) {
       next(error);
     }
   });
+
+  apiRouter.post(`/drafts/${type}/:slug/restore/:versionId`, requireDraftEditor, async (req, res, next) => {
+    try {
+      const sourceDocument = await readDocument(type, req.params.slug);
+
+      if (!sourceDocument) {
+        res.status(404).json({ error: 'Source document not found' });
+        return;
+      }
+
+      const bundle = await restoreDraftBundle(
+        type,
+        req.params.slug,
+        req.params.versionId,
+        req.currentUser?.id || null,
+        req.currentUser?.name || ''
+      );
+
+      if (bundle?.status === 'missing_version') {
+        res.status(404).json({ error: 'Draft history version not found.' });
+        return;
+      }
+
+      if (bundle?.status === 'missing_document') {
+        res.status(404).json({ error: 'Source document not found' });
+        return;
+      }
+
+      res.json(bundle);
+    } catch (error) {
+      next(error);
+    }
+  });
 }
 
 apiRouter.get('/health', async (req, res) => {
@@ -175,15 +270,19 @@ apiRouter.get('/health', async (req, res) => {
   res.status(health.ok ? 200 : 503).json(health);
 });
 
-apiRouter.get('/profiles', async (req, res, next) => {
+apiRouter.get('/profiles', (req, res) => {
+  res.status(404).json({ error: 'Not found.' });
+});
+
+apiRouter.get('/internal/profiles', requireInternalUser, async (req, res, next) => {
   try {
-    res.json({ profiles: await listProfiles() });
+    res.json({ profiles: await listProfilesForUser(req.currentUser) });
   } catch (error) {
     next(error);
   }
 });
 
-apiRouter.get('/profiles/:slug/public', async (req, res, next) => {
+apiRouter.get('/internal/profiles/:slug', requireInternalProfileAccess, async (req, res, next) => {
   try {
     const profile = await readPublicProfile(req.params.slug);
 
@@ -194,19 +293,7 @@ apiRouter.get('/profiles/:slug/public', async (req, res, next) => {
 
     res.json(profile);
   } catch (error) {
-    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
-      return;
-    }
-
-    next(error);
-  }
-});
-
-apiRouter.get('/profiles/:slug/portfolio', async (req, res, next) => {
-  try {
-    res.json({ items: await listPublicPortfolio(req.params.slug) });
-  } catch (error) {
-    if (respondIfMissingSchema(error, res, 'Portfolio database tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest portfolio migration.')) {
+    if (respondIfMissingSchema(error, res, 'Public profile tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest profile migrations.')) {
       return;
     }
 
@@ -219,6 +306,30 @@ apiRouter.get('/auth/me', async (req, res) => {
     dataSource: getDataSource(),
     user: req.currentUser || null
   });
+});
+
+apiRouter.get('/shared/resume/:token', async (req, res, next) => {
+  try {
+    res.set({
+      'Cache-Control': 'no-store, private',
+      'Referrer-Policy': 'no-referrer'
+    });
+
+    const document = await resolveSharedResume(req.params.token);
+
+    if (!document) {
+      res.status(404).json({ error: 'Shared resume not found.' });
+      return;
+    }
+
+    res.json(document);
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Shared resume links are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) {
+      return;
+    }
+
+    next(error);
+  }
 });
 
 apiRouter.post('/auth/login', async (req, res, next) => {
@@ -280,6 +391,53 @@ apiRouter.get('/admin/profiles', requireMemberManager, async (req, res, next) =>
   try {
     res.json({ profiles: await listManagedProfiles() });
   } catch (error) {
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:profileId/share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const share = await readResumeShareLink(req.shareLinkProfile.id);
+    res.json({ link: share?.link || null });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Resume sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) {
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:profileId/share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const share = await createOrRotateResumeShareLink(req.shareLinkProfile.id, req.currentUser?.id || null);
+    if (!share) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({
+      link: share.link,
+      shareUrl: shareUrlForRequest(req, share.token)
+    });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Resume sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) {
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:profileId/share-link', requireShareLinkManager, async (req, res, next) => {
+  try {
+    await revokeResumeShareLink(req.shareLinkProfile.id);
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Resume sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) {
+      return;
+    }
+
     next(error);
   }
 });
@@ -407,7 +565,7 @@ apiRouter.patch('/admin/members/:memberId', requireMemberManager, async (req, re
   }
 });
 
-apiRouter.get('/documents/:type/:slug', async (req, res, next) => {
+async function sendInternalDocument(req, res, next) {
   try {
     const document = await readDocument(req.params.type, req.params.slug);
 
@@ -420,6 +578,12 @@ apiRouter.get('/documents/:type/:slug', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+}
+
+apiRouter.get('/internal/documents/:type/:slug', requireInternalProfileAccess, sendInternalDocument);
+// Retire the former anonymous slug endpoint; public access must use a share token.
+apiRouter.get('/documents/:type/:slug', (req, res) => {
+  res.status(404).json({ error: 'Not found.' });
 });
 
 apiRouter.get('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req, res, next) => {
@@ -431,6 +595,192 @@ apiRouter.get('/admin/profiles/:slug/portfolio', requireDraftEditor, async (req,
     }
 
     if (error.message === 'Portfolio item management requires DATA_SOURCE=database.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:slug/certifications', requireDraftEditor, async (req, res, next) => {
+  try {
+    res.json({ items: await listManagedCertifications(req.params.slug) });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Certification tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest certification migration.')) {
+      return;
+    }
+
+    if (error.message === 'Certification management requires DATA_SOURCE=database.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:slug/certifications', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await createCertification(req.params.slug, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Certification tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest certification migration.')) {
+      return;
+    }
+
+    if (['Certification management requires DATA_SOURCE=database.', 'Certification title and issuer are required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.patch('/admin/profiles/:slug/certifications/:certificationId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await updateCertification(req.params.slug, req.params.certificationId, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Certification not found.' });
+      return;
+    }
+
+    res.json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Certification tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest certification migration.')) {
+      return;
+    }
+
+    if ([
+      'Certification management requires DATA_SOURCE=database.',
+      'Certification title and issuer are required.',
+      'A valid certification id is required.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:slug/certifications/:certificationId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const deleted = await deleteCertification(req.params.slug, req.params.certificationId);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Certification not found.' });
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Certification tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest certification migration.')) {
+      return;
+    }
+
+    if (['Certification management requires DATA_SOURCE=database.', 'A valid certification id is required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:slug/references', requireDraftEditor, async (req, res, next) => {
+  try {
+    res.json({ items: await listManagedReferences(req.params.slug) });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Reference tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest reference migration.')) {
+      return;
+    }
+
+    if (error.message === 'Reference management requires DATA_SOURCE=database.') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:slug/references', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await createReference(req.params.slug, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Reference tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest reference migration.')) {
+      return;
+    }
+
+    if (['Reference management requires DATA_SOURCE=database.', 'Reference name is required.'].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.patch('/admin/profiles/:slug/references/:referenceId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const item = await updateReference(req.params.slug, req.params.referenceId, req.body || {}, req.currentUser?.id || null);
+
+    if (!item) {
+      res.status(404).json({ error: 'Reference not found.' });
+      return;
+    }
+
+    res.json({ item });
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Reference tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest reference migration.')) {
+      return;
+    }
+
+    if ([
+      'Reference management requires DATA_SOURCE=database.',
+      'Reference name is required.',
+      'A valid reference id is required.'
+    ].includes(error.message)) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:slug/references/:referenceId', requireDraftEditor, async (req, res, next) => {
+  try {
+    const deleted = await deleteReference(req.params.slug, req.params.referenceId);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Reference not found.' });
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Reference tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest reference migration.')) {
+      return;
+    }
+
+    if (['Reference management requires DATA_SOURCE=database.', 'A valid reference id is required.'].includes(error.message)) {
       res.status(400).json({ error: error.message });
       return;
     }

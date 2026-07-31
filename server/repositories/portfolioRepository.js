@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { isDatabaseEnabled } from '../config/app.js';
 import { getDatabasePool } from '../config/database.js';
 import { portfolioCollections, profiles } from '../data/profiles.js';
+import { listPublicCertifications } from './certificationRepository.js';
+import { listPublicReferences } from './referenceRepository.js';
 import { readDocument } from './documentRepository.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -210,7 +212,7 @@ async function loadDatabasePortfolioItems(connectionOrPool, profileId, { publicO
   return itemRows.map(row => sanitizePortfolioItem(row, assetsByItemId.get(row.id) || []));
 }
 
-function buildPublicProfilePayload(resumeDocument, portfolioItems, sectionVisibility) {
+function buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, sectionVisibility) {
   if (!resumeDocument) return null;
 
   return {
@@ -226,7 +228,9 @@ function buildPublicProfilePayload(resumeDocument, portfolioItems, sectionVisibi
       resumeLink: resumeDocument.meta.resumeLink || `/resume/${resumeDocument.meta.slug}`,
       coverLetterLink: resumeDocument.meta.coverLetterLink || `/cover-letter/${resumeDocument.meta.slug}`
     },
-    portfolioItems
+    portfolioItems,
+    certifications,
+    references
   };
 }
 
@@ -294,22 +298,26 @@ export async function listPublicPortfolio(profileSlug) {
 
 export async function readPublicProfile(profileSlug) {
   if (!isDatabaseEnabled()) {
-    const [resumeDocument, portfolioItems] = await Promise.all([
+    const [resumeDocument, portfolioItems, certifications, references] = await Promise.all([
       readDocument('resume', profileSlug),
-      listPublicPortfolio(profileSlug)
+      listPublicPortfolio(profileSlug),
+      listPublicCertifications(profileSlug),
+      listPublicReferences(profileSlug)
     ]);
 
-    return buildPublicProfilePayload(resumeDocument, portfolioItems, profileSectionVisibility(profileSlug));
+    return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug));
   }
 
   const pool = getDatabasePool();
   const profile = await findActiveProfileBySlug(pool, profileSlug);
-  const [resumeDocument, portfolioItems] = await Promise.all([
+  const [resumeDocument, portfolioItems, certifications, references] = await Promise.all([
     readDocument('resume', profileSlug),
-    profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : []
+    profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : [],
+    listPublicCertifications(profileSlug),
+    listPublicReferences(profileSlug)
   ]);
 
-  return buildPublicProfilePayload(resumeDocument, portfolioItems, profileSectionVisibility(profileSlug, profile));
+  return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug, profile));
 }
 
 export async function listManagedPortfolio(profileSlug) {
