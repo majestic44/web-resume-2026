@@ -1,0 +1,657 @@
+.resume-template-modern {
+  color: #101828;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #d0d5dd, transparent 16%);
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(16, 24, 40, 0.14);
+}
+
+.resume-template-modern__hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 28px;
+  align-items: end;
+  padding: 38px;
+  background: linear-gradient(120deg, color-mix(in srgb, #0b63f3, #0d2445 52%), color-mix(in srgb, #14b8a6, #072042 65%));
+  color: #f8fbff;
+}
+
+.resume-template-modern__contact-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  background: rgba(7, 17, 35, 0.28);
+  border: 1px solid rgba(248, 251, 255, 0.2);
+  border-radius: 14px;
+}
+
+.resume-template-modern__profile-photo {
+  width: 104px;
+  height: 104px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(248, 251, 255, 0.36);
+  background: rgba(7, 17, 35, 0.34);
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+}
+
+.resume-template-modern__profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.resume-template-modern__profile-photo span {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fbff;
+}
+
+.resume-template-modern__contact-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resume-template-modern__contact-list a,
+.resume-template-modern__contact-list span {
+  color: #f8fbff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.resume-template-modern__body {
+  padding: 28px 34px 34px;
+}
+
+.resume-template-modern__section {
+  margin-top: 26px;
+}
+
+.resume-template-modern__section h2 {
+  margin: 0 0 14px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #0b63f3, #101828 28%);
+}
+
+.resume-template-modern__hero h1 {
+  margin: 8px 0 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  line-height: 1.06;
+}
+
+.resume-template-modern__hero .hero-role {
+  margin: 10px 0 0;
+  max-width: none;
+  color: #ffffff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(0.82rem, 1.05vw, 0.98rem);
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(7, 17, 35, 0.28);
+  white-space: nowrap;
+}
+
+.resume-template-modern__hero-summary {
+  margin: 12px 0 0;
+  color: rgba(248, 251, 255, 0.86);
+  line-height: 1.55;
+}
+
+.resume-template-modern__section--strengths {
+  margin-top: 0;
+}
+
+.resume-template-modern__strength-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resume-template-modern__strength-list span {
+  border-left: 3px solid #0b63f3;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #101828;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.resume-template-modern__skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resume-template-modern__skill-group {
+  background: #f7f9fc;
+  border: 1px solid color-mix(in srgb, #d0d5dd, transparent 14%);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.resume-template-modern__skill-group h3,
+.resume-template-modern__timeline-item h3,
+.resume-template-modern__simple-entry h3 {
+  margin: 0 0 10px;
+}
+
+.resume-template-modern__skill-group h3 {
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #475467;
+}
+
+.resume-template-modern__skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resume-template-modern__skill-chip {
+  border: 1px solid color-mix(in srgb, #d0d5dd, transparent 4%);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, #ffffff, transparent 2%);
+}
+
+.resume-template-modern__skill-chip svg {
+  color: color-mix(in srgb, #0b63f3, #14b8a6 26%);
+}
+
+.resume-template-modern__timeline {
+  position: relative;
+  margin-left: 6px;
+  padding-left: 22px;
+}
+
+.resume-template-modern__timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 10px;
+  width: 2px;
+  background: linear-gradient(#0b63f3, #14b8a6);
+}
+
+.resume-template-modern__timeline-item {
+  position: relative;
+  padding: 2px 0 16px;
+}
+
+.resume-template-modern__timeline-item::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  left: -20px;
+  top: 6px;
+  background: #ffffff;
+  border: 2px solid #0b63f3;
+}
+
+.resume-template-modern__timeline-item.is-current::before {
+  background: #0b63f3;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #0b63f3, transparent 78%);
+}
+
+.resume-template-modern__role-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.resume-template-modern__role-row p,
+.resume-template-modern__role-row span,
+.resume-template-modern__simple-entry span {
+  margin: 0;
+  color: #475467;
+  font-weight: 700;
+}
+
+.resume-template-modern__role-row h3 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.05rem;
+}
+
+.resume-template-modern__role-row p {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.resume-template-modern__timeline-item ul {
+  margin: 10px 0 0 18px;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.resume-template-modern__simple-entry {
+  border: 1px solid color-mix(in srgb, #d0d5dd, transparent 14%);
+  border-radius: 12px;
+  padding: 12px;
+  background: #f7f9fc;
+  margin-top: 10px;
+}
+
+.resume-template-modern__simple-entry:first-of-type {
+  margin-top: 0;
+}
+
+.resume-template-modern__simple-entry h3 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.98rem;
+}
+
+.resume-template-modern__simple-entry p {
+  margin-top: 5px;
+  color: #475467;
+  font-weight: 600;
+}
+
+.resume-template-modern__simple-bullets {
+  margin: 10px 0 0 18px;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.resume-template-modern--letter {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.resume-template-modern__letter-body {
+  padding: 30px 34px 38px;
+}
+
+.resume-template-modern__letter-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+  padding-bottom: 22px;
+  border-bottom: 1px solid color-mix(in srgb, #d0d5dd, transparent 14%);
+}
+
+.resume-template-modern__letter-date {
+  margin: 0 0 16px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  color: color-mix(in srgb, #0b63f3, #101828 28%);
+}
+
+.resume-template-modern__recipient {
+  display: grid;
+  gap: 4px;
+  color: #475467;
+  font-weight: 600;
+}
+
+.resume-template-modern__recipient p,
+.resume-template-modern__letter-content p,
+.resume-template-modern__letter-signoff p {
+  margin: 0;
+}
+
+.resume-template-modern__letter-content {
+  padding-top: 24px;
+  display: grid;
+  gap: 16px;
+  color: #101828;
+}
+
+.resume-template-modern__letter-content p {
+  line-height: 1.72;
+  font-size: 1.06rem;
+}
+
+.resume-template-modern__letter-signoff {
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.resume-template-modern__letter-name {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.06rem;
+}
+
+@media (max-width: 780px) {
+  .resume-template-modern__hero {
+    grid-template-columns: 1fr;
+    padding: 22px;
+  }
+
+  .resume-template-modern__hero .hero-role {
+    white-space: normal;
+  }
+
+  .resume-template-modern__body,
+  .resume-template-modern__letter-body {
+    padding: 22px;
+  }
+
+  .resume-template-modern__skill-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resume-template-modern__letter-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .resume-template-modern {
+    background: #ffffff;
+  }
+
+  .resume-template-modern__hero {
+    padding: 6px 7px;
+    background: #eef4ff;
+    color: #0f172a;
+    border-bottom: 1px solid #d3def2;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .resume-template-modern__hero h1 {
+    margin-top: 3px;
+    font-size: 20pt;
+  }
+
+  .resume-template-modern__hero .hero-role {
+    margin-top: 4px;
+    font-size: 9.2pt;
+    color: #0f172a;
+  }
+
+  .resume-template-modern__hero-summary {
+    margin-top: 4px;
+    font-size: 8.1pt;
+    line-height: 1.22;
+    color: #0f172a;
+  }
+
+  .resume-template-modern__contact-card {
+    background: #f8fbff;
+    border: 1px solid #d3def2;
+    padding: 5px 6px;
+  }
+
+  .resume-template-modern__contact-list {
+    gap: 3px;
+  }
+
+  .resume-template-modern__contact-list a,
+  .resume-template-modern__contact-list span,
+  .resume-template-modern__contact-list svg,
+  .resume-template-modern__hero .eyebrow {
+    color: #0f172a;
+  }
+
+  .resume-template-modern__contact-list a,
+  .resume-template-modern__contact-list span {
+    font-size: 7.9pt;
+  }
+
+  .resume-template-modern__profile-photo {
+    display: none;
+  }
+
+  .resume-template-modern__body {
+    padding: 6px 7px 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.38fr) minmax(0, 0.62fr);
+    gap: 6px 10px;
+    align-items: start;
+  }
+
+  .resume-template-modern__section {
+    margin-top: 0;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .resume-template-modern__section h2 {
+    color: #163f7e;
+    font-size: 8pt;
+    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .resume-template-modern__section--strengths {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .resume-template-modern__section:nth-of-type(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .resume-template-modern__section:nth-of-type(3) {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+  }
+
+  .resume-template-modern__section:nth-of-type(4) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .resume-template-modern__section:nth-of-type(5) {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .resume-template-modern__strength-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .resume-template-modern__strength-list span {
+    border-radius: 7px;
+    padding: 2px 5px;
+    font-size: 7pt;
+    line-height: 1.15;
+  }
+
+  .resume-template-modern__skill-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .resume-template-modern__skill-group {
+    border-radius: 7px;
+    padding: 4px 5px;
+    margin: 0;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .resume-template-modern__skill-group h3 {
+    font-size: 7pt;
+    margin-bottom: 3px;
+  }
+
+  .resume-template-modern__skill-list {
+    gap: 3px;
+  }
+
+  .resume-template-modern__skill-chip {
+    padding: 1px 4px;
+    font-size: 7pt;
+    font-weight: 700;
+  }
+
+  .resume-template-modern__timeline {
+    margin-left: 0;
+    padding-left: 12px;
+  }
+
+  .resume-template-modern__timeline::before {
+    background: #6d97d8;
+    left: 3px;
+  }
+
+  .resume-template-modern__timeline-item::before {
+    border-color: #2a65bb;
+    left: -13px;
+    top: 4px;
+    width: 7px;
+    height: 7px;
+  }
+
+  .resume-template-modern__timeline-item.is-current::before {
+    background: #2a65bb;
+    box-shadow: none;
+  }
+
+  .resume-template-modern__timeline-item {
+    padding-bottom: 5px;
+    break-inside: avoid;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .resume-template-modern__role-row h3 {
+    font-size: 8.7pt;
+  }
+
+  .resume-template-modern__role-row p {
+    margin-top: 2px;
+    font-size: 7.8pt;
+  }
+
+  .resume-template-modern__role-row span {
+    font-size: 7.7pt;
+    white-space: nowrap;
+  }
+
+  .resume-template-modern__timeline-item ul,
+  .resume-template-modern__simple-bullets {
+    margin-top: 3px;
+    margin-left: 13px;
+    font-size: 7.7pt;
+    line-height: 1.18;
+  }
+
+  .resume-template-modern__simple-entry {
+    margin-top: 4px;
+    border-radius: 7px;
+    padding: 5px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .resume-template-modern__simple-entry h3 {
+    font-size: 7.9pt;
+  }
+
+  .resume-template-modern__simple-entry p {
+    margin-top: 2px;
+    font-size: 7.5pt;
+  }
+
+  .resume-template-modern--letter {
+    box-shadow: none;
+  }
+
+  .resume-template-modern--letter .resume-template-modern__hero {
+    padding: 10px;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 10px;
+    align-items: start;
+    background: #eef4ff;
+    color: #0f172a;
+    border-bottom: 1px solid #d3def2;
+  }
+
+  .resume-template-modern--letter .resume-template-modern__hero h1 {
+    margin-top: 4px;
+    font-size: 24pt;
+  }
+
+  .resume-template-modern--letter .resume-template-modern__hero .hero-role,
+  .resume-template-modern--letter .resume-template-modern__hero .eyebrow,
+  .resume-template-modern--letter .resume-template-modern__contact-list a,
+  .resume-template-modern--letter .resume-template-modern__contact-list span,
+  .resume-template-modern--letter .resume-template-modern__contact-list svg {
+    color: #0f172a;
+  }
+
+  .resume-template-modern--letter .resume-template-modern__contact-card {
+    background: #f8fbff;
+    border: 1px solid #d3def2;
+    padding: 9px;
+  }
+
+  .resume-template-modern__letter-body {
+    padding: 10px;
+  }
+
+  .resume-template-modern__letter-meta {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .resume-template-modern__letter-date {
+    margin-bottom: 8px;
+    font-size: 9pt;
+  }
+
+  .resume-template-modern__recipient {
+    gap: 2px;
+    font-size: 8.8pt;
+    color: #334155;
+  }
+
+  .resume-template-modern__letter-content {
+    padding-top: 10px;
+    gap: 9px;
+  }
+
+  .resume-template-modern__letter-content p {
+    font-size: 9.4pt;
+    line-height: 1.42;
+  }
+
+  .resume-template-modern__letter-signoff {
+    gap: 3px;
+    padding-top: 4px;
+  }
+
+  .resume-template-modern__letter-name {
+    font-size: 9.6pt;
+  }
+}
