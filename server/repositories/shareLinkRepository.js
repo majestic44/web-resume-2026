@@ -353,3 +353,173 @@ export async function resolveSharedResume(token) {
     content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
   };
 }
+
+export async function readResumeQrLink(profileId) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const pool = getDatabasePool();
+  const [rows] = await pool.query(
+    `
+      SELECT l.*, u.name AS created_by_name
+      FROM profile_resume_qr_links l
+      LEFT JOIN users u ON u.id = l.created_by_user_id
+      WHERE l.profile_id = ?
+      LIMIT 1
+    `,
+    [profile.id]
+  );
+
+  return {
+    profile,
+    link: sanitizeResumeQrLink(rows[0])
+  };
+}
+
+export async function createOrRotateResumeQrLink(profileId, actorUserId = null) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const token = createShareToken();
+  const tokenHash = shareTokenHash(token);
+  const pool = getDatabasePool();
+
+  await pool.query(
+    `
+      INSERT INTO profile_resume_qr_links (
+        profile_id,
+        token_hash,
+        created_by_user_id
+      )
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        token_hash = VALUES(token_hash),
+        created_at = CURRENT_TIMESTAMP,
+        disabled_at = NULL,
+        last_accessed_at = NULL,
+        created_by_user_id = VALUES(created_by_user_id)
+    `,
+    [profile.id, tokenHash, actorUserId]
+  );
+
+  const share = await readResumeQrLink(profile.id);
+
+  return {
+    ...share,
+    token
+  };
+}
+
+export async function disableResumeQrLink(profileId) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const pool = getDatabasePool();
+
+  const [result] = await pool.query(
+    `
+      UPDATE profile_resume_qr_links
+      SET disabled_at = COALESCE(disabled_at, CURRENT_TIMESTAMP)
+      WHERE profile_id = ?
+        AND disabled_at IS NULL
+    `,
+    [profile.id]
+  );
+
+  return {
+    profile,
+    revoked: result.affectedRows > 0
+  };
+}
+
+export async function resolveResumeQrLink(token) {
+  if (!isDatabaseEnabled()) return null;
+
+  const rawToken = String(token || '').trim();
+
+  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
+    return null;
+  }
+
+  const pool = getDatabasePool();
+
+  const [rows] = await pool.query(
+    `
+      SELECT
+        l.id AS qr_link_id,
+        l.profile_id,
+        d.template,
+        d.content_json,
+        d.updated_at
+      FROM profile_resume_qr_links l
+      INNER JOIN profiles p
+        ON p.id = l.profile_id
+      INNER JOIN documents d
+        ON d.profile_id = p.id
+        AND d.type = 'resume'
+        AND d.slug = 'resume'
+      WHERE l.token_hash = ?
+        AND l.disabled_at IS NULL
+        AND p.status = 'active'
+      LIMIT 1
+    `,
+    [shareTokenHash(rawToken)]
+  );
+
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  await pool.query(
+    `
+      UPDATE profile_resume_qr_links
+      SET last_accessed_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    [row.qr_link_id]
+  );
+
+  return {
+    meta: {
+      template: row.template,
+      updatedAt: row.updated_at
+    },
+    content: typeof row.content_json === 'string'
+      ? JSON.parse(row.content_json)
+      : row.content_json
+  };
+}
+
+export async function hasActiveResumeQrLink(token) {
+  if (!isDatabaseEnabled()) return false;
+
+  const rawToken = String(token || '').trim();
+
+  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
+    return false;
+  }
+
+  const pool = getDatabasePool();
+
+  const [rows] = await pool.query(
+    `
+      SELECT 1
+      FROM profile_resume_qr_links l
+      INNER JOIN profiles p
+        ON p.id = l.profile_id
+      INNER JOIN documents d
+        ON d.profile_id = p.id
+        AND d.type = 'resume'
+        AND d.slug = 'resume'
+      WHERE l.token_hash = ?
+        AND l.disabled_at IS NULL
+        AND p.status = 'active'
+      LIMIT 1
+    `,
+    [shareTokenHash(rawToken)]
+  );
+
+  return rows.length > 0;
+}

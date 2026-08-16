@@ -1,6 +1,7 @@
 import { Button, Card, Input, Label, TextField } from '@heroui/react';
 import { Copy, Link2, LockKeyhole, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import ProfileQRCode from './ProfileQRCode.jsx';
 
 export function ProfileSharePanel({ authState, profile }) {
   const [link, setLink] = useState(null);
