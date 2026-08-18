@@ -42,6 +42,7 @@ import {
   readResumeQrLink,
   readResumeShareLink,
   resolveResumeQrLink,
+  resolveResumeQrProfile,
   resolveSharedProfile,
   resolveSharedProfileReferences,
   resolveSharedProfileResume,
@@ -96,10 +97,10 @@ function shareUrlForRequest(req, token, { qr = false } = {}) {
   return `${baseUrl}/shared/resume/${qr ? 'qr/' : ''}${token}`;
 }
 
-function profileShareUrlForRequest(req, token) {
+function profileShareUrlForRequest(req, token, { qr = false } = {}) {
   const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
   const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
-  return `${baseUrl}/shared/profile/${token}`;
+  return `${baseUrl}/shared/profile/${qr ? 'qr/' : ''}${token}`;
 }
 
 async function requireShareLinkManager(req, res, next) {
@@ -392,6 +393,22 @@ apiRouter.get('/shared/profile/:token', async (req, res, next) => {
   }
 });
 
+apiRouter.get('/shared/profile/qr/:token', async (req, res, next) => {
+  try {
+    res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
+    const profile = await resolveResumeQrProfile(req.params.token);
+    if (!profile) {
+      res.status(404).json({ error: 'Shared profile QR link not found.' });
+      return;
+    }
+
+    res.json(profile);
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Resume QR links are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.')) return;
+    next(error);
+  }
+});
+
 apiRouter.get('/shared/profile/:token/resume', async (req, res, next) => {
   try {
     res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
@@ -404,6 +421,22 @@ apiRouter.get('/shared/profile/:token/resume', async (req, res, next) => {
     res.json(document);
   } catch (error) {
     if (respondIfMissingSchema(error, res, 'Shared profile links are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
+apiRouter.get('/shared/profile/qr/:token/resume', async (req, res, next) => {
+  try {
+    res.set({ 'Cache-Control': 'no-store, private', 'Referrer-Policy': 'no-referrer' });
+    const document = await resolveResumeQrLink(req.params.token);
+    if (!document) {
+      res.status(404).json({ error: 'Shared profile QR link not found.' });
+      return;
+    }
+
+    res.json(document);
+  } catch (error) {
+    if (respondIfMissingSchema(error, res, 'Resume QR links are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.')) return;
     next(error);
   }
 });
@@ -615,7 +648,7 @@ apiRouter.post('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, 
 
     res.status(201).json({
       link: result.link,
-      shareUrl: shareUrlForRequest(req, result.token, { qr: true })
+      shareUrl: profileShareUrlForRequest(req, result.publicToken, { qr: true })
     });
   } catch (error) {
     if (respondIfMissingSchema(

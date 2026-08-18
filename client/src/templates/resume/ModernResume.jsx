@@ -17,7 +17,7 @@ import { WorkHistory } from './WorkHistory.jsx';
 const PRINT_WORK_LIMIT = 10;
 const PRINT_WORK_ON_FIRST_PAGE = 4;
 
-export function ModernResume({ resume, qrCodeUrl = '' }) {
+export function ModernResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
   const initials = getInitials(resume.name);
   const printableWork = resume.work.slice(0, PRINT_WORK_LIMIT);
   const primaryPrintableWork = printableWork.slice(0, PRINT_WORK_ON_FIRST_PAGE);
@@ -42,7 +42,7 @@ export function ModernResume({ resume, qrCodeUrl = '' }) {
             {resume.linkedin ? <li><a href={resume.linkedin}><Users size={15} />{resume.linkedin}</a></li> : null}
             {resume.location ? <li><span><MapPin size={15} />{resume.location}</span></li> : null}
           </ul>
-          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" /> : null}
+          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" onReady={onQrCodeReady} /> : null}
         </aside>
       </section>
 
@@ -160,6 +160,29 @@ export function ModernResume({ resume, qrCodeUrl = '' }) {
         ) : null}
       </section>
     </article>
+  );
+}
+
+function WorkHistory({ work }) {
+  return (
+    <div className="resume-template-modern__timeline">
+      {work.map((item, index) => (
+        <article className={`resume-template-modern__timeline-item${isCurrentRole(item.dateLabel) ? ' is-current' : ''}`} key={`${item.company}-${item.position}-${index}`}>
+          <div className="resume-template-modern__role-row">
+            <div>
+              <h3>{item.position}</h3>
+              <p>{[item.company, item.location].filter(Boolean).join(' | ')}</p>
+            </div>
+            <span>{item.dateLabel}</span>
+          </div>
+          {item.highlights?.length ? (
+            <ul>
+              {item.highlights.map(highlight => <li key={highlight}>{highlight}</li>)}
+            </ul>
+          ) : null}
+        </article>
+      ))}
+    </div>
   );
 }
 

@@ -87,7 +87,12 @@ function assetKindLabel(asset, href) {
 
 export function ProfilePublic({ pathname, shared = false }) {
   const slug = useMemo(() => shared ? '' : (pathname.split('/')[2] || ''), [pathname, shared]);
-  const token = useMemo(() => shared ? (pathname.split('/')[3] || '') : '', [pathname, shared]);
+  const qrShare = useMemo(() => shared && pathname.split('/').filter(Boolean)[2] === 'qr', [pathname, shared]);
+  const token = useMemo(() => {
+    if (!shared) return '';
+    const segments = pathname.split('/').filter(Boolean);
+    return qrShare ? (segments[3] || '') : (segments[2] || '');
+  }, [pathname, qrShare, shared]);
   const [state, setState] = useState({ status: 'loading', payload: null });
   const [selectedType, setSelectedType] = useState('');
   const [selectedProgress, setSelectedProgress] = useState('');
@@ -114,7 +119,7 @@ export function ProfilePublic({ pathname, shared = false }) {
       return;
     }
 
-    const endpoint = shared ? `/api/shared/profile/${token}` : `/api/internal/profiles/${slug}`;
+    const endpoint = shared ? `/api/shared/profile/${qrShare ? 'qr/' : ''}${token}` : `/api/internal/profiles/${slug}`;
     fetch(endpoint)
       .then(response => {
         if (!response.ok) throw new Error('Profile not found');
@@ -122,7 +127,7 @@ export function ProfilePublic({ pathname, shared = false }) {
       })
       .then(payload => setState({ status: 'ready', payload }))
       .catch(error => setState({ status: 'error', error }));
-  }, [shared, slug, token]);
+  }, [shared, slug, token, qrShare]);
 
   useEffect(() => {
     setSelectedType('');
@@ -132,7 +137,7 @@ export function ProfilePublic({ pathname, shared = false }) {
     setReferencePassword('');
     setReferenceStatus('idle');
     setReferenceError('');
-  }, [shared, slug, token]);
+  }, [shared, slug, token, qrShare]);
 
   const unlockReferences = async event => {
     event.preventDefault();
