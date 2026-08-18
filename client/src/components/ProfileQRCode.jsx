@@ -18,6 +18,9 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel', onReady }) 
         return;
       }
 
+      setQrDataUrl('');
+      onReady?.(false);
+
       try {
         setError('');
 

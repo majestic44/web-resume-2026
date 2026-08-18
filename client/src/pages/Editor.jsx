@@ -307,6 +307,7 @@ export function Editor({ authState }) {
   const selectedProfile = profiles.find(profile => profile.slug === selectedSlug);
   const isPortfolioMode = selectedDocumentType === 'portfolio';
   const isDirty = !isWorkspaceMode && Boolean(sourceDocument && generatedJsonText !== savedJsonText);
+  const hasUnpublishedResumeChanges = selectedDocumentType === 'resume' && (isDirty || hasSavedDraft);
   const canEditSelectedProfile = authState.dataSource !== 'database'
     || (authState.user && editableProfiles.some(profile => profile.slug === selectedSlug));
   const canPublishDraft = authState.dataSource === 'database'
@@ -757,15 +758,20 @@ export function Editor({ authState }) {
                 <span>Public Preview</span>
               </a>
               {selectedDocumentType === 'resume' ? (
-                <Button
-                  type="button"
-                  variant="bordered"
-                  isDisabled={!selectedSlug}
-                  onPress={() => window.open(printResumePath(selectedSlug), '_blank', 'noopener,noreferrer')}
-                >
-                  <Printer size={16} />
-                  <span>Print Resume with QR Code</span>
-                </Button>
+                <div>
+                  <Button
+                    type="button"
+                    variant="bordered"
+                    isDisabled={!selectedSlug || hasUnpublishedResumeChanges}
+                    onPress={() => window.open(printResumePath(selectedSlug), '_blank', 'noopener,noreferrer')}
+                  >
+                    <Printer size={16} />
+                    <span>Print Live Resume with QR Code</span>
+                  </Button>
+                  {hasUnpublishedResumeChanges ? (
+                    <p className="field-help">Publish or reset the draft before printing so the PDF matches the live resume.</p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           </Card.Content>
