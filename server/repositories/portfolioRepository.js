@@ -224,7 +224,9 @@ async function loadPublicProfileSection(section, loader) {
   try {
     return await loader();
   } catch (error) {
-    error.profileSection = section;
+    if (error instanceof Error) {
+      error.profileSection = section;
+    }
     throw error;
   }
 }
