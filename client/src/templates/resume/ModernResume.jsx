@@ -14,7 +14,7 @@ import { ResumeSection } from '../shared.jsx';
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 import { WorkHistory } from './WorkHistory.jsx';
 
-const PRINT_WORK_LIMIT = 10;
+const PRINT_WORK_LIMIT = 11;
 const PRINT_WORK_ON_FIRST_PAGE = 4;
 
 export function ModernResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
