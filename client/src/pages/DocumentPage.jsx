@@ -14,11 +14,8 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
     const [, route, profileSlug] = pathname.split('/');
     return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug, token: '', qrShare: false };
   }, [pathname, shared]);
-  const [qrCodeReady, setQrCodeReady] = useState(!qrShare);
-
-  useEffect(() => {
-    setQrCodeReady(!qrShare);
-  }, [pathname, qrShare]);
+  const [qrCodeReady, setQrCodeReady] = useState(true);
+  const shouldAutoPrint = !shared && new URLSearchParams(window.location.search).get('print') === '1';
 
   useEffect(() => {
     const endpoint = shared
@@ -30,9 +27,19 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
         if (!response.ok) throw new Error('Document not found');
         return response.json();
       })
-      .then(document => setState({ status: 'ready', document }))
+      .then(document => {
+        setQrCodeReady(!(!shared && type === 'resume' && document.meta?.resumeQrToken));
+        setState({ status: 'ready', document });
+      })
       .catch(error => setState({ status: 'error', error }));
   }, [shared, sharedProfile, token, type, slug, qrShare]);
+
+  useEffect(() => {
+    if (!shouldAutoPrint || state.status !== 'ready' || !qrCodeReady) return undefined;
+
+    const timer = window.setTimeout(() => window.print(), 0);
+    return () => window.clearTimeout(timer);
+  }, [shouldAutoPrint, state.status, qrCodeReady]);
 
   if (state.status === 'loading') {
     return <DocumentFrame title="Loading" shared={shared}><p className="muted">Loading document...</p></DocumentFrame>;
@@ -44,6 +51,9 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
 
   const meta = state.document.meta;
   const title = meta.name || state.document.content?.name || 'Shared Resume';
+  const qrCodeUrl = !shared && type === 'resume' && meta.resumeQrToken
+    ? `${window.location.origin}/shared/profile/qr/${meta.resumeQrToken}`
+    : '';
 
   return (
     <DocumentFrame title={title} subtitle={shared ? 'Shared Resume' : (type === 'resume' ? 'Professional Resume' : 'Cover Letter')} template={meta.template} shared={shared} isExportReady={qrCodeReady}>
@@ -51,7 +61,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
         <ResumeView
           data={state.document.content}
           template={meta.template}
-          qrCodeUrl={qrShare ? (sharedProfile ? window.location.href.replace(/\/resume$/, '') : window.location.href) : ''}
+          qrCodeUrl={qrCodeUrl}
           onQrCodeReady={setQrCodeReady}
         />
       ) : (
