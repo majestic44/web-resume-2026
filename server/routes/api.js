@@ -405,6 +405,13 @@ apiRouter.get('/shared/profile/qr/:token', async (req, res, next) => {
     res.json(profile);
   } catch (error) {
     if (respondIfMissingSchema(error, res, 'Resume QR links are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.')) return;
+    if (error.profileSection) {
+      res.status(500).json({
+        error: 'Shared profile content could not be loaded.',
+        code: `QR_PROFILE_${error.profileSection.toUpperCase()}`
+      });
+      return;
+    }
     next(error);
   }
 });

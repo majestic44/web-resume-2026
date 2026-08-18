@@ -220,6 +220,15 @@ async function loadDatabasePortfolioItems(connectionOrPool, profileId, { publicO
   return itemRows.map(row => sanitizePortfolioItem(row, assetsByItemId.get(row.id) || []));
 }
 
+async function loadPublicProfileSection(section, loader) {
+  try {
+    return await loader();
+  } catch (error) {
+    error.profileSection = section;
+    throw error;
+  }
+}
+
 function buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, sectionVisibility) {
   if (!resumeDocument) return null;
 
@@ -307,10 +316,10 @@ export async function listPublicPortfolio(profileSlug) {
 export async function readPublicProfile(profileSlug, { includeReferences = true } = {}) {
   if (!isDatabaseEnabled()) {
     const [resumeDocument, portfolioItems, certifications, references] = await Promise.all([
-      readDocument('resume', profileSlug),
-      listPublicPortfolio(profileSlug),
-      listPublicCertifications(profileSlug),
-      includeReferences ? listPublicReferences(profileSlug) : Promise.resolve([])
+      loadPublicProfileSection('resume', () => readDocument('resume', profileSlug)),
+      loadPublicProfileSection('portfolio', () => listPublicPortfolio(profileSlug)),
+      loadPublicProfileSection('certifications', () => listPublicCertifications(profileSlug)),
+      includeReferences ? loadPublicProfileSection('references', () => listPublicReferences(profileSlug)) : Promise.resolve([])
     ]);
 
     return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug));
@@ -319,10 +328,10 @@ export async function readPublicProfile(profileSlug, { includeReferences = true 
   const pool = getDatabasePool();
   const profile = await findActiveProfileBySlug(pool, profileSlug);
   const [resumeDocument, portfolioItems, certifications, references] = await Promise.all([
-    readDocument('resume', profileSlug),
-    profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : [],
-    listPublicCertifications(profileSlug),
-    includeReferences ? listPublicReferences(profileSlug) : Promise.resolve([])
+    loadPublicProfileSection('resume', () => readDocument('resume', profileSlug)),
+    loadPublicProfileSection('portfolio', () => (profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : [])),
+    loadPublicProfileSection('certifications', () => listPublicCertifications(profileSlug)),
+    includeReferences ? loadPublicProfileSection('references', () => listPublicReferences(profileSlug)) : Promise.resolve([])
   ]);
 
   return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug, profile));
