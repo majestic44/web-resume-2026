@@ -16,16 +16,28 @@ export function ResumeQrPanel({ authState, profile }) {
 
   useEffect(() => {
     if (!canManage) return;
+    let cancelled = false;
     setStatus('loading');
+    setLink(null);
     setShareUrl('');
+    setError('');
     fetch(`/api/admin/profiles/${profile.id}/resume-qr`)
       .then(async response => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || 'Unable to load QR code status.');
         return payload;
       })
-      .then(payload => { setLink(payload.link || null); setStatus('ready'); })
-      .catch(loadError => { setError(loadError.message); setStatus('error'); });
+      .then(payload => {
+        if (cancelled) return;
+        setLink(payload.link || null);
+        setStatus('ready');
+      })
+      .catch(loadError => {
+        if (cancelled) return;
+        setError(loadError.message);
+        setStatus('error');
+      });
+    return () => { cancelled = true; };
   }, [canManage, profile?.id]);
 
   const createOrRotate = async () => {

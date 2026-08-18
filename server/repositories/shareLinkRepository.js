@@ -434,7 +434,7 @@ export async function disableResumeQrLink(profileId) {
   const [result] = await pool.query(
     `
       UPDATE profile_resume_qr_links
-      SET disabled_at = COALESCE(disabled_at, CURRENT_TIMESTAMP)
+      SET disabled_at = CURRENT_TIMESTAMP
       WHERE profile_id = ?
         AND disabled_at IS NULL
     `,
@@ -447,17 +447,18 @@ export async function disableResumeQrLink(profileId) {
   };
 }
 
-export async function resolveResumeQrLink(token) {
+function normalizeResumeQrToken(token) {
+  const rawToken = String(token || '').trim();
+  return /^[A-Za-z0-9_-]{43}$/.test(rawToken) ? rawToken : null;
+}
+
+async function findActiveResumeQrDocument(token) {
   if (!isDatabaseEnabled()) return null;
 
-  const rawToken = String(token || '').trim();
-
-  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
-    return null;
-  }
+  const rawToken = normalizeResumeQrToken(token);
+  if (!rawToken) return null;
 
   const pool = getDatabasePool();
-
   const [rows] = await pool.query(
     `
       SELECT
@@ -481,11 +482,14 @@ export async function resolveResumeQrLink(token) {
     [shareTokenHash(rawToken)]
   );
 
-  const row = rows[0];
+  return rows[0] || null;
+}
 
-  if (!row) {
-    return null;
-  }
+export async function resolveResumeQrLink(token) {
+  const row = await findActiveResumeQrDocument(token);
+  if (!row) return null;
+
+  const pool = getDatabasePool();
 
   await pool.query(
     `
@@ -508,33 +512,5 @@ export async function resolveResumeQrLink(token) {
 }
 
 export async function hasActiveResumeQrLink(token) {
-  if (!isDatabaseEnabled()) return false;
-
-  const rawToken = String(token || '').trim();
-
-  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
-    return false;
-  }
-
-  const pool = getDatabasePool();
-
-  const [rows] = await pool.query(
-    `
-      SELECT 1
-      FROM profile_resume_qr_links l
-      INNER JOIN profiles p
-        ON p.id = l.profile_id
-      INNER JOIN documents d
-        ON d.profile_id = p.id
-        AND d.type = 'resume'
-        AND d.slug = 'resume'
-      WHERE l.token_hash = ?
-        AND l.disabled_at IS NULL
-        AND p.status = 'active'
-      LIMIT 1
-    `,
-    [shareTokenHash(rawToken)]
-  );
-
-  return rows.length > 0;
+  return Boolean(await findActiveResumeQrDocument(token));
 }
