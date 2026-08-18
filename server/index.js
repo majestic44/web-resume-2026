@@ -27,6 +27,7 @@ app.use(attachCurrentUser);
 
 app.use('/api', apiRouter);
 app.use(express.static(publicDir));
+app.use(express.static(clientDistDir));
 app.use('/app', express.static(clientDistDir));
 
 app.get('/shared/resume/qr/:token', async (req, res) => {
@@ -110,6 +111,10 @@ app.get('*', (req, res) => {
   `);
 });
 
-app.listen(port, () => {
-  console.log(`Household Resume app listening on http://localhost:${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Household Resume app listening on http://localhost:${port}`);
+  });
+}
+
+export default app;
