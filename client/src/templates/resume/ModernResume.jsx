@@ -11,8 +11,9 @@ import {
   Wrench
 } from 'lucide-react';
 import { ResumeSection } from '../shared.jsx';
+import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 
-export function ModernResume({ resume }) {
+export function ModernResume({ resume, qrCodeUrl = '' }) {
   const initials = getInitials(resume.name);
 
   return (
@@ -34,6 +35,7 @@ export function ModernResume({ resume }) {
             {resume.linkedin ? <li><a href={resume.linkedin}><Users size={15} />{resume.linkedin}</a></li> : null}
             {resume.location ? <li><span><MapPin size={15} />{resume.location}</span></li> : null}
           </ul>
+          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" /> : null}
         </aside>
       </section>
 

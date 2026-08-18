@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Copy, Download, QrCode } from 'lucide-react';
 
-export default function ProfileQRCode({ shareUrl }) {
+export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -71,6 +71,15 @@ export default function ProfileQRCode({ shareUrl }) {
     link.click();
     link.remove();
   };
+
+  if (variant === 'header') {
+    return qrDataUrl ? (
+      <figure className="resume-header-qr-code">
+        <img src={qrDataUrl} alt="Scan to open this resume" width="96" height="96" />
+        <figcaption>Scan to view online</figcaption>
+      </figure>
+    ) : null;
+  }
 
   if (!shareUrl) {
     return (

@@ -46,6 +46,24 @@
   text-underline-offset: 0.12em;
 }
 
+.resume-template-classic__header .resume-header-qr-code {
+  width: fit-content;
+  margin: 14px auto 0;
+  color: #3f4752;
+}
+
+.resume-header-qr-code {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.resume-header-qr-code img { display: block; width: 76px; height: 76px; padding: 4px; border: 1px solid #959ca6; background: #fff; }
+
 .resume-template-classic__section {
   margin-top: 28px;
 }

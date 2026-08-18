@@ -90,10 +90,10 @@ function respondIfMissingSchema(error, res, message) {
   return true;
 }
 
-function shareUrlForRequest(req, token) {
+function shareUrlForRequest(req, token, { qr = false } = {}) {
   const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
   const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
-  return `${baseUrl}/shared/resume/${token}`;
+  return `${baseUrl}/shared/resume/${qr ? 'qr/' : ''}${token}`;
 }
 
 function profileShareUrlForRequest(req, token) {
@@ -615,7 +615,7 @@ apiRouter.post('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, 
 
     res.status(201).json({
       link: result.link,
-      shareUrl: shareUrlForRequest(req, result.token)
+      shareUrl: shareUrlForRequest(req, result.token, { qr: true })
     });
   } catch (error) {
     if (respondIfMissingSchema(

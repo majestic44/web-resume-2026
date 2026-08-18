@@ -51,6 +51,21 @@ function sanitizeProfileShareLink(row) {
   };
 }
 
+function sanitizeResumeQrLink(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    active: !row.disabled_at,
+    createdAt: row.created_at,
+    disabledAt: row.disabled_at,
+    lastAccessedAt: row.last_accessed_at,
+    createdByUserId: row.created_by_user_id || null,
+    createdByName: row.created_by_name || ''
+  };
+}
+
 function normalizeReferencesPassword(value) {
   const password = String(value || '');
   if (password.length < 12) {
