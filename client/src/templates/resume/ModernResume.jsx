@@ -15,7 +15,7 @@ import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 
 export function ModernResume({ resume, qrCodeUrl = '' }) {
   const initials = getInitials(resume.name);
-  const printableWork = resume.work.slice(0, 8);
+  const printableWork = resume.work.slice(0, 10);
   const primaryPrintableWork = printableWork.slice(0, 4);
   const continuedPrintableWork = printableWork.slice(4);
 
