@@ -1,6 +1,6 @@
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 
-export function ClassicResume({ resume, qrCodeUrl = '' }) {
+export function ClassicResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
   const skillList = resume.skillGroups.flatMap(group => group.keywords);
 
   return (
@@ -13,7 +13,7 @@ export function ClassicResume({ resume, qrCodeUrl = '' }) {
           {resume.email ? <a href={`mailto:${resume.email}`}>{resume.email}</a> : null}
           {resume.linkedin ? <a href={resume.linkedin}>{resume.linkedin}</a> : null}
         </div>
-        {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" /> : null}
+        {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" onReady={onQrCodeReady} /> : null}
       </header>
 
       <section className="resume-template-classic__section">

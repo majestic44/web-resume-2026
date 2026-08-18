@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Copy, Download, QrCode } from 'lucide-react';
 
-export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
+export default function ProfileQRCode({ shareUrl, variant = 'panel', onReady }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -14,6 +14,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
       if (!shareUrl) {
         setError('');
         setQrDataUrl('');
+        onReady?.(false);
         return;
       }
 
@@ -28,6 +29,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
 
         if (!cancelled) {
           setQrDataUrl(dataUrl);
+          onReady?.(true);
         }
       } catch (generationError) {
         console.error('Failed to generate QR code:', generationError);
@@ -35,6 +37,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
         if (!cancelled) {
           setError('Unable to generate the QR code.');
           setQrDataUrl('');
+          onReady?.(false);
         }
       }
     }
@@ -44,7 +47,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
     return () => {
       cancelled = true;
     };
-  }, [shareUrl]);
+  }, [shareUrl, onReady]);
 
   const copyShareUrl = async () => {
     if (!shareUrl) return;
