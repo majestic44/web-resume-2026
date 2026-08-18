@@ -11,9 +11,13 @@ import {
   Wrench
 } from 'lucide-react';
 import { ResumeSection } from '../shared.jsx';
+import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 
-export function ModernResume({ resume }) {
+export function ModernResume({ resume, qrCodeUrl = '' }) {
   const initials = getInitials(resume.name);
+  const printableWork = resume.work.slice(0, 8);
+  const primaryPrintableWork = printableWork.slice(0, 4);
+  const continuedPrintableWork = printableWork.slice(4);
 
   return (
     <article className="resume-template-modern">
@@ -34,6 +38,7 @@ export function ModernResume({ resume }) {
             {resume.linkedin ? <li><a href={resume.linkedin}><Users size={15} />{resume.linkedin}</a></li> : null}
             {resume.location ? <li><span><MapPin size={15} />{resume.location}</span></li> : null}
           </ul>
+          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" /> : null}
         </aside>
       </section>
 
@@ -65,24 +70,7 @@ export function ModernResume({ resume }) {
         </ResumeSection>
 
         <ResumeSection title={resume.sectionTitles.work} className="resume-template-modern__section">
-          <div className="resume-template-modern__timeline">
-            {resume.work.map((item, index) => (
-              <article className={`resume-template-modern__timeline-item${isCurrentRole(item.dateLabel) ? ' is-current' : ''}`} key={`${item.company}-${item.position}-${index}`}>
-                <div className="resume-template-modern__role-row">
-                  <div>
-                    <h3>{item.position}</h3>
-                    <p>{[item.company, item.location].filter(Boolean).join(' | ')}</p>
-                  </div>
-                  <span>{item.dateLabel}</span>
-                </div>
-                {item.highlights?.length ? (
-                  <ul>
-                    {item.highlights.map(highlight => <li key={highlight}>{highlight}</li>)}
-                  </ul>
-                ) : null}
-              </article>
-            ))}
-          </div>
+          <WorkHistory work={resume.work} />
         </ResumeSection>
 
         {resume.volunteer.length ? (
@@ -113,7 +101,84 @@ export function ModernResume({ resume }) {
           </ResumeSection>
         ) : null}
       </section>
+
+      <section className="resume-template-modern__print-body" aria-label="Printable resume content">
+        <div className="resume-template-modern__print-page-one">
+          <aside className="resume-template-modern__print-sidebar">
+            {resume.selectedStrengths.length ? (
+              <ResumeSection title={resume.sectionTitles.strengths} className="resume-template-modern__section resume-template-modern__section--strengths">
+                <div className="resume-template-modern__strength-list">
+                  {resume.selectedStrengths.map(strength => <span key={strength}>{strength}</span>)}
+                </div>
+              </ResumeSection>
+            ) : null}
+
+            <ResumeSection title={resume.sectionTitles.skills} className="resume-template-modern__section">
+              <div className="resume-template-modern__skill-grid">
+                {resume.skillGroups.map(group => (
+                  <article className="resume-template-modern__skill-group" key={group.name}>
+                    <h3>{group.name}</h3>
+                    <div className="resume-template-modern__skill-list">
+                      {group.keywords.map(skill => (
+                        <span className="resume-template-modern__skill-chip" key={skill}>
+                          {getSkillIcon(skill, group.name)}
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </ResumeSection>
+
+            {resume.education.length ? (
+              <ResumeSection title={resume.sectionTitles.education} className="resume-template-modern__section">
+                {resume.education.map((item, index) => (
+                  <article className="resume-template-modern__simple-entry" key={`${item.institution}-${index}`}>
+                    <h3>{item.area}</h3>
+                    <p>{[item.institution, item.location].filter(Boolean).join(' | ')}</p>
+                    {item.endDate ? <span>{item.endDate}</span> : null}
+                  </article>
+                ))}
+              </ResumeSection>
+            ) : null}
+          </aside>
+
+          <ResumeSection title={resume.sectionTitles.work} className="resume-template-modern__section resume-template-modern__print-work-primary">
+            <WorkHistory work={primaryPrintableWork} />
+          </ResumeSection>
+        </div>
+
+        {continuedPrintableWork.length ? (
+          <ResumeSection title={`${resume.sectionTitles.work} Continued`} className="resume-template-modern__section resume-template-modern__print-work-continuation">
+            <WorkHistory work={continuedPrintableWork} />
+          </ResumeSection>
+        ) : null}
+      </section>
     </article>
+  );
+}
+
+function WorkHistory({ work }) {
+  return (
+    <div className="resume-template-modern__timeline">
+      {work.map((item, index) => (
+        <article className={`resume-template-modern__timeline-item${isCurrentRole(item.dateLabel) ? ' is-current' : ''}`} key={`${item.company}-${item.position}-${index}`}>
+          <div className="resume-template-modern__role-row">
+            <div>
+              <h3>{item.position}</h3>
+              <p>{[item.company, item.location].filter(Boolean).join(' | ')}</p>
+            </div>
+            <span>{item.dateLabel}</span>
+          </div>
+          {item.highlights?.length ? (
+            <ul>
+              {item.highlights.map(highlight => <li key={highlight}>{highlight}</li>)}
+            </ul>
+          ) : null}
+        </article>
+      ))}
+    </div>
   );
 }
 

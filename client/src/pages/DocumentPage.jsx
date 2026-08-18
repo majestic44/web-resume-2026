@@ -4,19 +4,20 @@ import { getTemplateDefinition } from '../templates/registry.js';
 
 export function DocumentPage({ pathname, shared = false, sharedProfile = false }) {
   const [state, setState] = useState({ status: 'loading', document: null });
-  const { type, slug, token } = useMemo(() => {
+  const { type, slug, token, qrShare } = useMemo(() => {
     if (shared) {
-      const [, , , shareToken] = pathname.split('/');
-      return { type: 'resume', slug: '', token: shareToken };
+      const segments = pathname.split('/').filter(Boolean);
+      const qrShare = segments[2] === 'qr';
+      return { type: 'resume', slug: '', token: qrShare ? segments[3] : segments[2], qrShare };
     }
 
     const [, route, profileSlug] = pathname.split('/');
-    return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug, token: '' };
+    return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug, token: '', qrShare: false };
   }, [pathname, shared]);
 
   useEffect(() => {
     const endpoint = shared
-      ? (sharedProfile ? `/api/shared/profile/${token}/resume` : `/api/shared/resume/${token}`)
+      ? (sharedProfile ? `/api/shared/profile/${token}/resume` : `/api/shared/resume/${qrShare ? 'qr/' : ''}${token}`)
       : `/api/internal/documents/${type}/${slug}`;
 
     fetch(endpoint)
@@ -26,7 +27,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
       })
       .then(document => setState({ status: 'ready', document }))
       .catch(error => setState({ status: 'error', error }));
-  }, [shared, sharedProfile, token, type, slug]);
+  }, [shared, sharedProfile, token, type, slug, qrShare]);
 
   if (state.status === 'loading') {
     return <DocumentFrame title="Loading" shared={shared}><p className="muted">Loading document...</p></DocumentFrame>;
@@ -42,7 +43,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
   return (
     <DocumentFrame title={title} subtitle={shared ? 'Shared Resume' : (type === 'resume' ? 'Professional Resume' : 'Cover Letter')} template={meta.template} shared={shared}>
       {type === 'resume' ? (
-        <ResumeView data={state.document.content} template={meta.template} />
+        <ResumeView data={state.document.content} template={meta.template} qrCodeUrl={qrShare ? window.location.href : ''} />
       ) : (
         <CoverLetterView data={state.document.content} template={meta.template} />
       )}
@@ -68,10 +69,10 @@ function DocumentFrame({ title, subtitle = 'Document', template = 'modern', shar
   );
 }
 
-function ResumeView({ data, template }) {
+function ResumeView({ data, template, qrCodeUrl = '' }) {
   const resume = normalizeResumeData({ ...data, template });
   const { ResumeComponent } = getTemplateDefinition(resume.template);
-  return <ResumeComponent resume={resume} />;
+  return <ResumeComponent resume={resume} qrCodeUrl={qrCodeUrl} />;
 }
 
 function CoverLetterView({ data, template }) {

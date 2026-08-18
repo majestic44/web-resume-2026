@@ -51,6 +51,21 @@ function sanitizeProfileShareLink(row) {
   };
 }
 
+function sanitizeResumeQrLink(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    active: !row.disabled_at,
+    createdAt: row.created_at,
+    disabledAt: row.disabled_at,
+    lastAccessedAt: row.last_accessed_at,
+    createdByUserId: row.created_by_user_id || null,
+    createdByName: row.created_by_name || ''
+  };
+}
+
 function normalizeReferencesPassword(value) {
   const password = String(value || '');
   if (password.length < 12) {
@@ -286,65 +301,39 @@ export async function resolveSharedProfileReferences(token, password) {
   return { status: 'ok', references };
 }
 
-export async function hasActiveSharedResume(token) {
-  if (!isDatabaseEnabled()) return false;
-
+function normalizeResumeShareToken(token) {
   const rawToken = String(token || '').trim();
-  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) return false;
-
-  const pool = getDatabasePool();
-  const [rows] = await pool.query(
-    `
-      SELECT 1
-      FROM profile_resume_share_links l
-      INNER JOIN profiles p ON p.id = l.profile_id
-      INNER JOIN documents d
-        ON d.profile_id = p.id
-        AND d.type = 'resume'
-        AND d.slug = 'resume'
-      WHERE l.token_hash = ?
-        AND l.revoked_at IS NULL
-        AND p.status = 'active'
-      LIMIT 1
-    `,
-    [shareTokenHash(rawToken)]
-  );
-
-  return rows.length > 0;
+  return /^[A-Za-z0-9_-]{43}$/.test(rawToken) ? rawToken : null;
 }
 
-export async function resolveSharedResume(token) {
+async function findActiveSharedResumeDocument(token, { table, inactiveColumn, linkIdAlias }) {
   if (!isDatabaseEnabled()) return null;
 
-  const rawToken = String(token || '').trim();
-  if (!/^[A-Za-z0-9_-]{43}$/.test(rawToken)) return null;
+  const rawToken = normalizeResumeShareToken(token);
+  if (!rawToken) return null;
 
   const pool = getDatabasePool();
   const [rows] = await pool.query(
     `
-      SELECT l.id AS share_link_id, l.profile_id, d.template, d.content_json, d.updated_at
-      FROM profile_resume_share_links l
+      SELECT l.id AS ${linkIdAlias}, d.template, d.content_json, d.updated_at
+      FROM ${table} l
       INNER JOIN profiles p ON p.id = l.profile_id
       INNER JOIN documents d
         ON d.profile_id = p.id
         AND d.type = 'resume'
         AND d.slug = 'resume'
       WHERE l.token_hash = ?
-        AND l.revoked_at IS NULL
+        AND l.${inactiveColumn} IS NULL
         AND p.status = 'active'
       LIMIT 1
     `,
     [shareTokenHash(rawToken)]
   );
 
-  const row = rows[0];
-  if (!row) return null;
+  return rows[0] || null;
+}
 
-  await pool.query(
-    'UPDATE profile_resume_share_links SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [row.share_link_id]
-  );
-
+function formatSharedResumeDocument(row) {
   return {
     meta: {
       template: row.template,
@@ -352,4 +341,123 @@ export async function resolveSharedResume(token) {
     },
     content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
   };
+}
+
+async function resolveSharedResumeDocument(token, linkType) {
+  const row = await findActiveSharedResumeDocument(token, linkType);
+  if (!row) return null;
+
+  const pool = getDatabasePool();
+  await pool.query(
+    `UPDATE ${linkType.table} SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [row[linkType.linkIdAlias]]
+  );
+
+  return formatSharedResumeDocument(row);
+}
+
+const resumeShareLinkType = {
+  table: 'profile_resume_share_links',
+  inactiveColumn: 'revoked_at',
+  linkIdAlias: 'share_link_id'
+};
+
+const resumeQrLinkType = {
+  table: 'profile_resume_qr_links',
+  inactiveColumn: 'disabled_at',
+  linkIdAlias: 'qr_link_id'
+};
+
+export async function hasActiveSharedResume(token) {
+  return Boolean(await findActiveSharedResumeDocument(token, resumeShareLinkType));
+}
+
+export async function resolveSharedResume(token) {
+  return resolveSharedResumeDocument(token, resumeShareLinkType);
+}
+
+export async function readResumeQrLink(profileId) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const pool = getDatabasePool();
+  const [rows] = await pool.query(
+    `
+      SELECT l.*, u.name AS created_by_name
+      FROM profile_resume_qr_links l
+      LEFT JOIN users u ON u.id = l.created_by_user_id
+      WHERE l.profile_id = ?
+      LIMIT 1
+    `,
+    [profile.id]
+  );
+
+  return {
+    profile,
+    link: sanitizeResumeQrLink(rows[0])
+  };
+}
+
+export async function createOrRotateResumeQrLink(profileId, actorUserId = null) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const token = createShareToken();
+  const tokenHash = shareTokenHash(token);
+  const pool = getDatabasePool();
+
+  await pool.query(
+    `
+      INSERT INTO profile_resume_qr_links (
+        profile_id,
+        token_hash,
+        created_by_user_id
+      )
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        token_hash = VALUES(token_hash),
+        created_at = CURRENT_TIMESTAMP,
+        disabled_at = NULL,
+        last_accessed_at = NULL,
+        created_by_user_id = VALUES(created_by_user_id)
+    `,
+    [profile.id, tokenHash, actorUserId]
+  );
+
+  const share = await readResumeQrLink(profile.id);
+
+  return {
+    ...share,
+    token
+  };
+}
+
+export async function disableResumeQrLink(profileId) {
+  const profile = await findShareLinkProfile(profileId);
+  if (!profile) return null;
+
+  const pool = getDatabasePool();
+
+  const [result] = await pool.query(
+    `
+      UPDATE profile_resume_qr_links
+      SET disabled_at = CURRENT_TIMESTAMP
+      WHERE profile_id = ?
+        AND disabled_at IS NULL
+    `,
+    [profile.id]
+  );
+
+  return {
+    profile,
+    revoked: result.affectedRows > 0
+  };
+}
+
+export async function resolveResumeQrLink(token) {
+  return resolveSharedResumeDocument(token, resumeQrLinkType);
+}
+
+export async function hasActiveResumeQrLink(token) {
+  return Boolean(await findActiveSharedResumeDocument(token, resumeQrLinkType));
 }

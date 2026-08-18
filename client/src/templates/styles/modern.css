@@ -70,8 +70,25 @@
   word-break: break-word;
 }
 
+.resume-header-qr-code {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  color: #f8fbff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.resume-header-qr-code img { display: block; width: 76px; height: 76px; padding: 4px; border-radius: 5px; background: #fff; }
+
 .resume-template-modern__body {
   padding: 28px 34px 34px;
+}
+
+.resume-template-modern__print-body {
+  display: none;
 }
 
 .resume-template-modern__section {
@@ -368,6 +385,10 @@
 @media print {
   .resume-template-modern {
     background: #ffffff;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
   }
 
   .resume-template-modern__hero {
@@ -425,11 +446,37 @@
   }
 
   .resume-template-modern__body {
+    display: none;
+  }
+
+  .resume-template-modern__print-body {
+    display: block;
     padding: 6px 7px 0;
+  }
+
+  .resume-template-modern__print-page-one {
     display: grid;
     grid-template-columns: minmax(0, 0.38fr) minmax(0, 0.62fr);
-    gap: 6px 10px;
+    gap: 10px;
     align-items: start;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .resume-template-modern__print-sidebar {
+    display: grid;
+    gap: 8px;
+  }
+
+  .resume-template-modern__print-work-primary {
+    min-width: 0;
+  }
+
+  .resume-template-modern__print-work-continuation {
+    margin-top: 0;
+    padding-top: 6px;
+    break-before: page;
+    page-break-before: always;
   }
 
   .resume-template-modern__section {
@@ -445,31 +492,6 @@
     letter-spacing: 0.06em;
     break-after: avoid;
     page-break-after: avoid;
-  }
-
-  .resume-template-modern__section--strengths {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .resume-template-modern__section:nth-of-type(2) {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .resume-template-modern__section:nth-of-type(3) {
-    grid-column: 2;
-    grid-row: 1 / span 4;
-  }
-
-  .resume-template-modern__section:nth-of-type(4) {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .resume-template-modern__section:nth-of-type(5) {
-    grid-column: 1;
-    grid-row: 4;
   }
 
   .resume-template-modern__strength-list {

@@ -5,6 +5,7 @@ import { CertificationsWorkspace } from '../components/CertificationsWorkspace.j
 import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
 import { ReferencesWorkspace } from '../components/ReferencesWorkspace.jsx';
 import { ResumeSharePanel } from '../components/ResumeSharePanel.jsx';
+import { ResumeQrPanel } from '../components/ResumeQrPanel.jsx';
 import { ProfileSharePanel } from '../components/ProfileSharePanel.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { addBodyParagraph, coverLetterDraftToJson, createCoverLetterDraft, removeArrayItem as removeCoverLetterArrayItem } from '../lib/coverLetterDraft.js';
@@ -632,7 +633,7 @@ export function Editor({ authState }) {
                 </div>
               ))}
             </dl>
-            {selectedDocumentType === 'resume' ? <><ResumeSharePanel authState={authState} profile={selectedProfile} /><ProfileSharePanel authState={authState} profile={selectedProfile} /></> : null}
+            {selectedDocumentType === 'resume' ? <><ResumeSharePanel authState={authState} profile={selectedProfile} /><ResumeQrPanel authState={authState} profile={selectedProfile} /><ProfileSharePanel authState={authState} profile={selectedProfile} /></> : null}
             <div className="history-block">
               <div className="history-block__head">
                 <div>

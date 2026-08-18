@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/app/' : '/',
+  base: '/',
   root: 'client',
   plugins: [tailwindcss(), react()],
   build: {
