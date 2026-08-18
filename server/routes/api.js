@@ -648,7 +648,7 @@ apiRouter.post('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, 
 
     res.status(201).json({
       link: result.link,
-      shareUrl: profileShareUrlForRequest(req, result.token, { qr: true })
+      shareUrl: profileShareUrlForRequest(req, result.publicToken, { qr: true })
     });
   } catch (error) {
     if (respondIfMissingSchema(

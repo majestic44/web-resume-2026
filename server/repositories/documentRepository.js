@@ -2,6 +2,7 @@ import { isDatabaseEnabled } from '../config/app.js';
 import { getDatabasePool } from '../config/database.js';
 import { listProfiles as listSeedProfiles } from '../data/profiles.js';
 import { readSeedDocument } from '../services/documentStore.js';
+import { createResumeQrPublicToken } from '../services/resumeQrToken.js';
 
 function documentTypeForDatabase(type) {
   return type === 'cover-letter' ? 'cover_letter' : type;
@@ -101,9 +102,14 @@ export async function readDocument(type, profileSlug) {
         d.title,
         d.template,
         d.content_json,
-        d.updated_at
+        d.updated_at,
+        qr.id AS resume_qr_link_id,
+        qr.token_hash AS resume_qr_token_hash
       FROM documents d
       INNER JOIN profiles p ON p.id = d.profile_id
+      LEFT JOIN profile_resume_qr_links qr
+        ON qr.profile_id = p.id
+        AND qr.disabled_at IS NULL
       WHERE p.slug = :profileSlug
         AND p.status = 'active'
         AND d.type = :type
@@ -128,6 +134,9 @@ export async function readDocument(type, profileSlug) {
       label: row.headline || row.title,
       template: row.template,
       updatedAt: row.updated_at,
+      ...(apiType === 'resume' && row.resume_qr_link_id
+        ? { resumeQrToken: createResumeQrPublicToken(row.resume_qr_link_id, row.resume_qr_token_hash) }
+        : {}),
       ...(apiType === 'resume'
         ? profileLinks(row.profile_slug)
         : { backLink: `/resume/${row.profile_slug}` })

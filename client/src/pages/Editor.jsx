@@ -1,5 +1,5 @@
 import { Button, Card, Chip, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { Eye, History, ImagePlus, Plus, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
+import { Eye, History, ImagePlus, Plus, Printer, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CertificationsWorkspace } from '../components/CertificationsWorkspace.jsx';
 import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
@@ -79,6 +79,10 @@ function draftToJsonForType(type, draft) {
 function documentPreviewPath(type, slug) {
   if (['portfolio', 'certifications', 'references'].includes(type)) return `/profile/${slug}`;
   return type === 'cover-letter' ? `/cover-letter/${slug}` : `/resume/${slug}`;
+}
+
+function printResumePath(slug) {
+  return `/resume/${slug}?print=1`;
 }
 
 function documentTypeTitle(type) {
@@ -752,6 +756,17 @@ export function Editor({ authState }) {
                 <Eye size={16} />
                 <span>Public Preview</span>
               </a>
+              {selectedDocumentType === 'resume' ? (
+                <Button
+                  type="button"
+                  variant="bordered"
+                  isDisabled={!selectedSlug}
+                  onPress={() => window.open(printResumePath(selectedSlug), '_blank', 'noopener,noreferrer')}
+                >
+                  <Printer size={16} />
+                  <span>Print Resume with QR Code</span>
+                </Button>
+              ) : null}
             </div>
           </Card.Content>
         </Card>
