@@ -12,12 +12,16 @@ import {
 } from 'lucide-react';
 import { ResumeSection } from '../shared.jsx';
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
+import { WorkHistory } from './WorkHistory.jsx';
+
+const PRINT_WORK_LIMIT = 10;
+const PRINT_WORK_ON_FIRST_PAGE = 4;
 
 export function ModernResume({ resume, qrCodeUrl = '' }) {
   const initials = getInitials(resume.name);
-  const printableWork = resume.work.slice(0, 10);
-  const primaryPrintableWork = printableWork.slice(0, 4);
-  const continuedPrintableWork = printableWork.slice(4);
+  const printableWork = resume.work.slice(0, PRINT_WORK_LIMIT);
+  const primaryPrintableWork = printableWork.slice(0, PRINT_WORK_ON_FIRST_PAGE);
+  const continuedPrintableWork = printableWork.slice(PRINT_WORK_ON_FIRST_PAGE);
 
   return (
     <article className="resume-template-modern">
@@ -159,29 +163,6 @@ export function ModernResume({ resume, qrCodeUrl = '' }) {
   );
 }
 
-function WorkHistory({ work }) {
-  return (
-    <div className="resume-template-modern__timeline">
-      {work.map((item, index) => (
-        <article className={`resume-template-modern__timeline-item${isCurrentRole(item.dateLabel) ? ' is-current' : ''}`} key={`${item.company}-${item.position}-${index}`}>
-          <div className="resume-template-modern__role-row">
-            <div>
-              <h3>{item.position}</h3>
-              <p>{[item.company, item.location].filter(Boolean).join(' | ')}</p>
-            </div>
-            <span>{item.dateLabel}</span>
-          </div>
-          {item.highlights?.length ? (
-            <ul>
-              {item.highlights.map(highlight => <li key={highlight}>{highlight}</li>)}
-            </ul>
-          ) : null}
-        </article>
-      ))}
-    </div>
-  );
-}
-
 function getInitials(name) {
   return String(name || '')
     .split(' ')
@@ -202,8 +183,4 @@ function getSkillIcon(skill = '', group = '') {
   if (/problem|troubleshooting|repair/.test(token)) return <Wrench size={14} />;
 
   return <Sparkles size={14} />;
-}
-
-function isCurrentRole(dateLabel = '') {
-  return /\b(present|current)\b/i.test(String(dateLabel));
 }
