@@ -72,6 +72,18 @@ function normalizeAssets(input) {
     .filter(asset => asset.assetType && (asset.filePath || asset.externalUrl));
 }
 
+function parseStoredSkills(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function sanitizeAsset(row) {
   return {
     id: row.id,
@@ -84,11 +96,7 @@ function sanitizeAsset(row) {
 }
 
 function sanitizePortfolioItem(row, assets = []) {
-  const skills = Array.isArray(row.skills_json)
-    ? row.skills_json
-    : typeof row.skills_json === 'string'
-      ? JSON.parse(row.skills_json || '[]')
-      : [];
+  const skills = parseStoredSkills(row.skills_json);
 
   return {
     id: row.id,
