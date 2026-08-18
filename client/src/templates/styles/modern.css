@@ -70,6 +70,19 @@
   word-break: break-word;
 }
 
+.resume-header-qr-code {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  color: #f8fbff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.resume-header-qr-code img { display: block; width: 76px; height: 76px; padding: 4px; border-radius: 5px; background: #fff; }
+
 .resume-template-modern__body {
   padding: 28px 34px 34px;
 }

@@ -2477,6 +2477,33 @@ button.portfolio-card__asset-link {
   font-size: 0.78rem;
 }
 
+.resume-qr-code {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #cfe2e4;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fdfd;
+}
+
+.resume-qr-code__header,
+.resume-qr-code__content,
+.resume-qr-code__actions,
+.resume-qr-code__url {
+  display: grid;
+  gap: 8px;
+}
+
+.resume-qr-code__header { grid-template-columns: auto 1fr; }
+.resume-qr-code__header h3, .resume-qr-code__header p { margin: 0; }
+.resume-qr-code__header p { margin-top: 3px; color: #52616f; font-size: 0.85rem; }
+.resume-qr-code__image { width: fit-content; padding: 8px; background: #fff; border: 1px solid #d9e2ec; }
+.resume-qr-code__image img { display: block; max-width: min(100%, 240px); height: auto; }
+.resume-qr-code__actions { grid-template-columns: repeat(2, max-content); }
+.resume-qr-code__actions button { display: inline-flex; align-items: center; gap: 6px; }
+.resume-qr-code__url { color: #475569; font-size: 0.82rem; font-weight: 800; }
+.resume-qr-code__url input { width: 100%; border: 1px solid #b7d2d5; border-radius: 8px; padding: 8px 10px; font-size: 0.75rem; }
+
 .landing-card {
   max-width: 720px;
   margin: 5rem auto;

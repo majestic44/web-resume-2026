@@ -33,11 +33,15 @@ import { deleteDraftBundle, publishDraftBundle, readDraftBundle, restoreDraftBun
 import { createProfile, listManagedProfiles, updateProfile } from '../repositories/profileRepository.js';
 import { canEditProfile } from '../repositories/authRepository.js';
 import {
+  createOrRotateResumeQrLink,
   createOrRotateResumeShareLink,
   createOrRotateProfileShareLink,
+  disableResumeQrLink,
   findShareLinkProfile,
   readProfileShareLink,
+  readResumeQrLink,
   readResumeShareLink,
+  resolveResumeQrLink,
   resolveSharedProfile,
   resolveSharedProfileReferences,
   resolveSharedProfileResume,
@@ -86,10 +90,10 @@ function respondIfMissingSchema(error, res, message) {
   return true;
 }
 
-function shareUrlForRequest(req, token) {
+function shareUrlForRequest(req, token, { qr = false } = {}) {
   const configuredBaseUrl = String(process.env.APP_PUBLIC_URL || '').trim().replace(/\/$/, '');
   const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
-  return `${baseUrl}/shared/resume/${token}`;
+  return `${baseUrl}/shared/resume/${qr ? 'qr/' : ''}${token}`;
 }
 
 function profileShareUrlForRequest(req, token) {
@@ -320,6 +324,34 @@ apiRouter.get('/auth/me', async (req, res) => {
   });
 });
 
+apiRouter.get('/shared/resume/qr/:token', async (req, res, next) => {
+  try {
+    res.set({
+      'Cache-Control': 'no-store, private',
+      'Referrer-Policy': 'no-referrer'
+    });
+
+    const document = await resolveResumeQrLink(req.params.token);
+
+    if (!document) {
+      res.status(404).json({ error: 'Shared resume QR link not found.' });
+      return;
+    }
+
+    res.json(document);
+  } catch (error) {
+    if (respondIfMissingSchema(
+      error,
+      res,
+      'Resume QR links are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.'
+    )) {
+      return;
+    }
+
+    next(error);
+  }
+});
+
 apiRouter.get('/shared/resume/:token', async (req, res, next) => {
   try {
     res.set({
@@ -545,6 +577,78 @@ apiRouter.delete('/admin/profiles/:profileId/profile-share-link', requireShareLi
     res.status(204).end();
   } catch (error) {
     if (respondIfMissingSchema(error, res, 'Profile sharing tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest sharing migration.')) return;
+    next(error);
+  }
+});
+
+apiRouter.get('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const link = await readResumeQrLink(req.shareLinkProfile.id);
+
+    res.json({
+      link: link?.link || null
+    });
+  } catch (error) {
+    if (respondIfMissingSchema(
+      error,
+      res,
+      'Resume QR link tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.'
+    )) {
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.post('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const result = await createOrRotateResumeQrLink(
+      req.shareLinkProfile.id,
+      req.currentUser?.id || null
+    );
+
+    if (!result) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(201).json({
+      link: result.link,
+      shareUrl: shareUrlForRequest(req, result.token, { qr: true })
+    });
+  } catch (error) {
+    if (respondIfMissingSchema(
+      error,
+      res,
+      'Resume QR link tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.'
+    )) {
+      return;
+    }
+
+    next(error);
+  }
+});
+
+apiRouter.delete('/admin/profiles/:profileId/resume-qr', requireShareLinkManager, async (req, res, next) => {
+  try {
+    const result = await disableResumeQrLink(req.shareLinkProfile.id);
+
+    if (!result) {
+      res.status(404).json({ error: 'Profile not found.' });
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (respondIfMissingSchema(
+      error,
+      res,
+      'Resume QR link tables are not available yet. Run `npm.cmd run db:migrate` to apply the latest QR migration.'
+    )) {
+      return;
+    }
+
     next(error);
   }
 });
