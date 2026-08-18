@@ -504,6 +504,7 @@ export async function resolveResumeQrProfile(token) {
   const payload = await readPublicProfile(link.slug, { includeReferences: false });
   if (!payload) return null;
 
+  const pool = getDatabasePool();
   await pool.query(
     'UPDATE profile_resume_qr_links SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?',
     [link.qr_link_id]
