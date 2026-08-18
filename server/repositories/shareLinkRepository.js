@@ -458,6 +458,50 @@ export async function resolveResumeQrLink(token) {
   return resolveSharedResumeDocument(token, resumeQrLinkType);
 }
 
+export async function resolveResumeQrProfile(token) {
+  if (!isDatabaseEnabled()) return null;
+
+  const rawToken = normalizeResumeShareToken(token);
+  if (!rawToken) return null;
+
+  const pool = getDatabasePool();
+  const [rows] = await pool.query(
+    `
+      SELECT l.id AS qr_link_id, p.slug
+      FROM profile_resume_qr_links l
+      INNER JOIN profiles p ON p.id = l.profile_id
+      WHERE l.token_hash = ?
+        AND l.disabled_at IS NULL
+        AND p.status = 'active'
+      LIMIT 1
+    `,
+    [shareTokenHash(rawToken)]
+  );
+
+  const link = rows[0];
+  if (!link) return null;
+
+  const payload = await readPublicProfile(link.slug);
+  if (!payload) return null;
+
+  await pool.query(
+    'UPDATE profile_resume_qr_links SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [link.qr_link_id]
+  );
+
+  const { coverLetterLink, profileLink, ...safeProfile } = payload.profile;
+  return {
+    profile: {
+      ...safeProfile,
+      resumeLink: `/shared/profile/qr/${rawToken}/resume`,
+      referenceAccess: 'hidden'
+    },
+    portfolioItems: payload.portfolioItems,
+    certifications: payload.certifications,
+    references: []
+  };
+}
+
 export async function hasActiveResumeQrLink(token) {
   return Boolean(await findActiveSharedResumeDocument(token, resumeQrLinkType));
 }

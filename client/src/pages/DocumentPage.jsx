@@ -17,7 +17,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
 
   useEffect(() => {
     const endpoint = shared
-      ? (sharedProfile ? `/api/shared/profile/${token}/resume` : `/api/shared/resume/${qrShare ? 'qr/' : ''}${token}`)
+      ? (sharedProfile ? `/api/shared/profile/${qrShare ? 'qr/' : ''}${token}/resume` : `/api/shared/resume/${qrShare ? 'qr/' : ''}${token}`)
       : `/api/internal/documents/${type}/${slug}`;
 
     fetch(endpoint)
@@ -43,7 +43,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
   return (
     <DocumentFrame title={title} subtitle={shared ? 'Shared Resume' : (type === 'resume' ? 'Professional Resume' : 'Cover Letter')} template={meta.template} shared={shared}>
       {type === 'resume' ? (
-        <ResumeView data={state.document.content} template={meta.template} qrCodeUrl={qrShare ? window.location.href : ''} />
+        <ResumeView data={state.document.content} template={meta.template} qrCodeUrl={qrShare ? (sharedProfile ? window.location.href.replace(/\/resume$/, '') : window.location.href) : ''} />
       ) : (
         <CoverLetterView data={state.document.content} template={meta.template} />
       )}
