@@ -12,6 +12,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
 
     async function generateQrCode() {
       if (!shareUrl) {
+        setError('');
         setQrDataUrl('');
         return;
       }
