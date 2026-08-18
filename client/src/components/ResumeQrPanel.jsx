@@ -26,9 +26,9 @@ function ResumeQrHeader({ active }) {
   return (
     <div className="resume-share-panel__head">
       <div>
-        <p className="card-label">Resume QR Code</p>
-        <h3>Share from the resume header</h3>
-        <p className="field-help">Generate a private QR link. When opened or printed, the resume header includes the scannable code.</p>
+        <p className="card-label">Profile QR Code</p>
+        <h3>Share your profile from the resume header</h3>
+        <p className="field-help">Generate a private QR link to the profile. When its resume is opened or printed, the header includes the scannable code.</p>
       </div>
       <Chip color={active ? 'success' : 'default'} variant="soft">
         <QrCode size={14} />

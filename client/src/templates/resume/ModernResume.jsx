@@ -13,7 +13,7 @@ import {
 import { ResumeSection } from '../shared.jsx';
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
 
-export function ModernResume({ resume, qrCodeUrl = '' }) {
+export function ModernResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
   const initials = getInitials(resume.name);
   const printableWork = resume.work.slice(0, 8);
   const primaryPrintableWork = printableWork.slice(0, 4);
@@ -38,7 +38,7 @@ export function ModernResume({ resume, qrCodeUrl = '' }) {
             {resume.linkedin ? <li><a href={resume.linkedin}><Users size={15} />{resume.linkedin}</a></li> : null}
             {resume.location ? <li><span><MapPin size={15} />{resume.location}</span></li> : null}
           </ul>
-          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" /> : null}
+          {qrCodeUrl ? <ProfileQRCode shareUrl={qrCodeUrl} variant="header" onReady={onQrCodeReady} /> : null}
         </aside>
       </section>
 

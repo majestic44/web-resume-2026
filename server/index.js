@@ -42,6 +42,24 @@ app.get('/shared/resume/qr/:token', async (req, res) => {
       return;
     }
 
+    res.redirect(302, `/shared/profile/qr/${encodeURIComponent(req.params.token)}`);
+  } catch {
+    res.status(404).send('Not found');
+  }
+});
+
+app.get(['/shared/profile/qr/:token', '/shared/profile/qr/:token/resume'], async (req, res) => {
+  try {
+    res.set({
+      'Cache-Control': 'no-store, private',
+      'Referrer-Policy': 'no-referrer'
+    });
+
+    if (!await hasActiveResumeQrLink(req.params.token)) {
+      res.status(404).send('Not found');
+      return;
+    }
+
     res.sendFile(path.join(clientDistDir, 'index.html'));
   } catch {
     res.status(404).send('Not found');

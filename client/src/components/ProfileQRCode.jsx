@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Copy, Download, QrCode } from 'lucide-react';
 
-export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
+export default function ProfileQRCode({ shareUrl, variant = 'panel', onReady }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -14,6 +14,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
       if (!shareUrl) {
         setError('');
         setQrDataUrl('');
+        onReady?.(false);
         return;
       }
 
@@ -28,6 +29,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
 
         if (!cancelled) {
           setQrDataUrl(dataUrl);
+          onReady?.(true);
         }
       } catch (generationError) {
         console.error('Failed to generate QR code:', generationError);
@@ -35,6 +37,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
         if (!cancelled) {
           setError('Unable to generate the QR code.');
           setQrDataUrl('');
+          onReady?.(false);
         }
       }
     }
@@ -44,7 +47,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
     return () => {
       cancelled = true;
     };
-  }, [shareUrl]);
+  }, [shareUrl, onReady]);
 
   const copyShareUrl = async () => {
     if (!shareUrl) return;
@@ -67,7 +70,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
 
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = 'resume-qr-code.png';
+    link.download = 'profile-qr-code.png';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -76,8 +79,8 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
   if (variant === 'header') {
     return qrDataUrl ? (
       <figure className="resume-header-qr-code">
-        <img src={qrDataUrl} alt="Scan to open this resume" width="96" height="96" />
-        <figcaption>Scan to view online</figcaption>
+        <img src={qrDataUrl} alt="Scan to open this profile" width="96" height="96" />
+        <figcaption>Scan to view profile</figcaption>
       </figure>
     ) : null;
   }
@@ -88,7 +91,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
         <div className="resume-qr-code__header">
           <QrCode size={20} />
           <div>
-            <h3>Resume QR Code</h3>
+            <h3>Profile QR Code</h3>
             <p>Generate a share link first to create a QR code.</p>
           </div>
         </div>
@@ -102,9 +105,9 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
         <QrCode size={20} />
 
         <div>
-          <h3>Resume QR Code</h3>
+          <h3>Profile QR Code</h3>
           <p>
-            Scan this code to open the shared version of your resume.
+            Scan this code to open the shared profile.
           </p>
         </div>
       </div>
@@ -120,7 +123,7 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
           <div className="resume-qr-code__image">
             <img
               src={qrDataUrl}
-              alt="QR code for shared resume"
+              alt="QR code for shared profile"
               width="320"
               height="320"
             />
@@ -134,14 +137,14 @@ export default function ProfileQRCode({ shareUrl, variant = 'panel' }) {
 
             <button type="button" onClick={copyShareUrl}>
               <Copy size={16} />
-              <span>{copied ? 'Copied!' : 'Copy Resume Link'}</span>
+              <span>{copied ? 'Copied!' : 'Copy Profile Link'}</span>
             </button>
           </div>
         </div>
       ) : null}
 
       <label className="resume-qr-code__url">
-        <span>Resume share URL</span>
+        <span>Profile share URL</span>
         <input
           value={shareUrl}
           readOnly
