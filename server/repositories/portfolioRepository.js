@@ -224,7 +224,9 @@ async function loadPublicProfileSection(section, loader) {
   try {
     return await loader();
   } catch (error) {
-    error.profileSection = section;
+    if (error instanceof Error) {
+      error.profileSection = section;
+    }
     throw error;
   }
 }
@@ -307,7 +309,7 @@ export async function listPublicPortfolio(profileSlug) {
   }
 
   const pool = getDatabasePool();
-  const profile = await findActiveProfileBySlug(pool, profileSlug);
+  const profile = await loadPublicProfileSection('profile', () => findActiveProfileBySlug(pool, profileSlug));
   if (!profile) return [];
 
   return loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true });
