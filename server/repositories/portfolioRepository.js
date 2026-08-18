@@ -296,13 +296,13 @@ export async function listPublicPortfolio(profileSlug) {
   return loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true });
 }
 
-export async function readPublicProfile(profileSlug) {
+export async function readPublicProfile(profileSlug, { includeReferences = true } = {}) {
   if (!isDatabaseEnabled()) {
     const [resumeDocument, portfolioItems, certifications, references] = await Promise.all([
       readDocument('resume', profileSlug),
       listPublicPortfolio(profileSlug),
       listPublicCertifications(profileSlug),
-      listPublicReferences(profileSlug)
+      includeReferences ? listPublicReferences(profileSlug) : Promise.resolve([])
     ]);
 
     return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug));
@@ -314,7 +314,7 @@ export async function readPublicProfile(profileSlug) {
     readDocument('resume', profileSlug),
     profile ? loadDatabasePortfolioItems(pool, profile.id, { publicOnly: true }) : [],
     listPublicCertifications(profileSlug),
-    listPublicReferences(profileSlug)
+    includeReferences ? listPublicReferences(profileSlug) : Promise.resolve([])
   ]);
 
   return buildPublicProfilePayload(resumeDocument, portfolioItems, certifications, references, profileSectionVisibility(profileSlug, profile));

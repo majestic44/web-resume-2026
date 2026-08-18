@@ -501,7 +501,7 @@ export async function resolveResumeQrProfile(token) {
   const link = await findActiveResumeQrLink(token);
   if (!link) return null;
 
-  const payload = await readPublicProfile(link.slug);
+  const payload = await readPublicProfile(link.slug, { includeReferences: false });
   if (!payload) return null;
 
   await pool.query(
