@@ -23,5 +23,10 @@ export function parseResumeQrPublicToken(value) {
 
 export function isValidResumeQrPublicToken({ linkId, signature }, tokenHash) {
   const expected = createResumeQrPublicToken(linkId, tokenHash).split('.')[1];
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+
+  if (signatureBuffer.length !== expectedBuffer.length) return false;
+
+  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }

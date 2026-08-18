@@ -3,6 +3,7 @@ import { normalizeCoverLetterData, normalizeResumeData } from '../lib/resume.js'
 import { getTemplateDefinition } from '../templates/registry.js';
 
 export function DocumentPage({ pathname, shared = false, sharedProfile = false }) {
+  const isBrowser = typeof window !== 'undefined';
   const [state, setState] = useState({ status: 'loading', document: null });
   const { type, slug, token, qrShare } = useMemo(() => {
     if (shared) {
@@ -15,7 +16,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
     return { type: route === 'cover-letter' ? 'cover-letter' : 'resume', slug: profileSlug, token: '', qrShare: false };
   }, [pathname, shared]);
   const [qrCodeReady, setQrCodeReady] = useState(true);
-  const shouldAutoPrint = !shared && new URLSearchParams(window.location.search).get('print') === '1';
+  const shouldAutoPrint = isBrowser && !shared && new URLSearchParams(window.location.search).get('print') === '1';
 
   useEffect(() => {
     const endpoint = shared
@@ -35,11 +36,11 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
   }, [shared, sharedProfile, token, type, slug, qrShare]);
 
   useEffect(() => {
-    if (!shouldAutoPrint || state.status !== 'ready' || !qrCodeReady) return undefined;
+    if (!isBrowser || !shouldAutoPrint || state.status !== 'ready' || !qrCodeReady) return undefined;
 
     const timer = window.setTimeout(() => window.print(), 0);
     return () => window.clearTimeout(timer);
-  }, [shouldAutoPrint, state.status, qrCodeReady]);
+  }, [isBrowser, shouldAutoPrint, state.status, qrCodeReady]);
 
   if (state.status === 'loading') {
     return <DocumentFrame title="Loading" shared={shared}><p className="muted">Loading document...</p></DocumentFrame>;
@@ -51,7 +52,7 @@ export function DocumentPage({ pathname, shared = false, sharedProfile = false }
 
   const meta = state.document.meta;
   const title = meta.name || state.document.content?.name || 'Shared Resume';
-  const qrCodeUrl = !shared && type === 'resume' && meta.resumeQrToken
+  const qrCodeUrl = isBrowser && !shared && type === 'resume' && meta.resumeQrToken
     ? `${window.location.origin}/shared/profile/qr/${meta.resumeQrToken}`
     : '';
 
