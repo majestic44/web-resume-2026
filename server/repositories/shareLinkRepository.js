@@ -5,6 +5,7 @@ import { getDatabasePool } from '../config/database.js';
 import { readDocument } from './documentRepository.js';
 import { readPublicProfile } from './portfolioRepository.js';
 import { listPublicReferences } from './referenceRepository.js';
+import { listPublicCertifications } from './certificationRepository.js';
 import {
   createResumeQrPublicToken,
   isValidResumeQrPublicToken,
@@ -320,7 +321,7 @@ async function findActiveSharedResumeDocument(token, { table, inactiveColumn, li
   const pool = getDatabasePool();
   const [rows] = await pool.query(
     `
-      SELECT l.id AS ${linkIdAlias}, d.template, d.content_json, d.updated_at
+      SELECT l.id AS ${linkIdAlias}, p.slug, d.template, d.content_json, d.updated_at
       FROM ${table} l
       INNER JOIN profiles p ON p.id = l.profile_id
       INNER JOIN documents d
@@ -338,13 +339,16 @@ async function findActiveSharedResumeDocument(token, { table, inactiveColumn, li
   return rows[0] || null;
 }
 
-function formatSharedResumeDocument(row) {
+async function formatSharedResumeDocument(row) {
   return {
     meta: {
       template: row.template,
       updatedAt: row.updated_at
     },
-    content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
+    content: {
+      ...(typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json),
+      certifications: await listPublicCertifications(row.slug)
+    }
   };
 }
 

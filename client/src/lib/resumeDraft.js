@@ -60,8 +60,16 @@ export function createResumeDraft(data = {}) {
       skills: data.sectionTitles?.skills || 'Core Skills',
       work: data.sectionTitles?.work || 'Professional Experience',
       education: data.sectionTitles?.education || 'Education',
-      volunteer: data.sectionTitles?.volunteer || 'Volunteer Work'
+      volunteer: data.sectionTitles?.volunteer || 'Volunteer Work',
+      certifications: data.sectionTitles?.certifications || 'Certifications & Licenses',
+      notes: data.sectionTitles?.notes || 'Notes'
     },
+    sectionVisibility: {
+      certifications: Boolean(data.sectionVisibility?.certifications),
+      notes: Boolean(data.sectionVisibility?.notes)
+    },
+    certifications: Array.isArray(data.certifications) ? data.certifications : [],
+    notes: data.notes || '',
     summary: data.summary || data.basics?.summary || '',
     selectedStrengthsText: toLines(data.selectedStrengths),
     skills: normalizeSkillDraft(data.skills),
@@ -100,6 +108,12 @@ export function resumeDraftToJson(draft) {
     ...(basics.linkedin ? { linkedin: basics.linkedin } : {}),
     ...(image ? { image, images: { profile: image } } : {}),
     sectionTitles: draft.sectionTitles || {},
+    sectionVisibility: {
+      certifications: Boolean(draft.sectionVisibility?.certifications),
+      notes: Boolean(draft.sectionVisibility?.notes)
+    },
+    certifications: Array.isArray(draft.certifications) ? draft.certifications : [],
+    notes: String(draft.notes || '').trim(),
     summary: draft.summary || '',
     selectedStrengths: fromLines(draft.selectedStrengthsText),
     skills: (draft.skills || [])

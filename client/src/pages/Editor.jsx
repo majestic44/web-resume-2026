@@ -33,6 +33,7 @@ const editorSections = {
     { id: 'skills', label: 'Skills' },
     { id: 'experience', label: 'Experience' },
     { id: 'education', label: 'Education' },
+    { id: 'extras', label: 'Resume Details' },
     { id: 'json', label: 'JSON Preview' }
   ],
   'cover-letter': [
@@ -602,6 +603,9 @@ export function Editor({ authState }) {
                 ) : null}
                 {selectedDocumentType === 'resume' && activeSection === 'education' ? (
                   <EducationSection draft={draft} updateDraft={updateDraft} />
+                ) : null}
+                {selectedDocumentType === 'resume' && activeSection === 'extras' ? (
+                  <ResumeDetailsSection draft={draft} updateDraft={updateDraft} updateSectionTitle={updateSectionTitle} />
                 ) : null}
                 {selectedDocumentType === 'cover-letter' && activeSection === 'recipient' ? (
                   <RecipientSection draft={draft} updateDraft={updateDraft} />
@@ -1220,6 +1224,57 @@ function EducationSection({ draft, updateDraft }) {
         <Plus size={16} />
         <span>Add Education</span>
       </Button>
+    </>
+  );
+}
+
+function ResumeDetailsSection({ draft, updateDraft, updateSectionTitle }) {
+  const certificationsVisible = Boolean(draft.sectionVisibility?.certifications);
+  const notesVisible = Boolean(draft.sectionVisibility?.notes);
+
+  return (
+    <>
+      <EditorSectionHeading title="Bottom-of-resume details" description="Choose whether certifications/licenses and notes appear at the bottom of this resume." />
+      <div className="form-stack">
+        <label className="profile-section-toggle">
+          <input
+            type="checkbox"
+            checked={certificationsVisible}
+            onChange={event => updateDraft(current => ({
+              ...current,
+              sectionVisibility: { ...current.sectionVisibility, certifications: event.target.checked }
+            }))}
+          />
+          <span>Show Certifications & Licenses on this resume</span>
+        </label>
+        <DraftInput
+          label="Certifications Section Title"
+          value={draft.sectionTitles.certifications}
+          onChange={value => updateSectionTitle('certifications', value)}
+        />
+        <p className="field-help">Credentials are managed in the Certifications workspace and will be placed above Notes when enabled.</p>
+      </div>
+      <div className="form-stack">
+        <label className="profile-section-toggle">
+          <input
+            type="checkbox"
+            checked={notesVisible}
+            onChange={event => updateDraft(current => ({
+              ...current,
+              sectionVisibility: { ...current.sectionVisibility, notes: event.target.checked }
+            }))}
+          />
+          <span>Show Notes on this resume</span>
+        </label>
+        <DraftInput label="Notes Section Title" value={draft.sectionTitles.notes} onChange={value => updateSectionTitle('notes', value)} />
+        <DraftTextArea
+          label="Notes"
+          rows={5}
+          value={draft.notes}
+          onChange={value => updateDraft(current => ({ ...current, notes: value }))}
+          help="Use this for a concise availability, credential, or other closing note."
+        />
+      </div>
     </>
   );
 }

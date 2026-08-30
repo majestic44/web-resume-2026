@@ -296,6 +296,13 @@
   line-height: 1.5;
 }
 
+.resume-template-modern__notes {
+  margin: 0;
+  color: #475467;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
 .resume-template-modern--letter {
   max-width: 880px;
   margin: 0 auto;
@@ -477,6 +484,15 @@
     padding-top: 6px;
     break-before: page;
     page-break-before: always;
+  }
+
+  .resume-template-modern__print-bottom-details {
+    padding-top: 6px;
+  }
+
+  .resume-template-modern__notes {
+    font-size: 7.7pt;
+    line-height: 1.25;
   }
 
   .resume-template-modern__section {
