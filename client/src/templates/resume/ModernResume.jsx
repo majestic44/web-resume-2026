@@ -104,6 +104,8 @@ export function ModernResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
             ))}
           </ResumeSection>
         ) : null}
+
+        <ResumeBottomDetails resume={resume} />
       </section>
 
       <section className="resume-template-modern__print-body" aria-label="Printable resume content">
@@ -158,9 +160,43 @@ export function ModernResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
             <WorkHistory work={continuedPrintableWork} />
           </ResumeSection>
         ) : null}
+
+        <div className="resume-template-modern__print-bottom-details">
+          <ResumeBottomDetails resume={resume} />
+        </div>
       </section>
     </article>
   );
+}
+
+function ResumeBottomDetails({ resume }) {
+  return (
+    <>
+      {resume.sectionVisibility.certifications && resume.certifications.length ? (
+        <ResumeSection title={resume.sectionTitles.certifications} className="resume-template-modern__section">
+          {resume.certifications.map((item, index) => (
+            <article className="resume-template-modern__simple-entry" key={`${item.title}-${item.issuer}-${index}`}>
+              <h3>{item.title}</h3>
+              <p>{[item.issuer, item.credentialId].filter(Boolean).join(' | ')}</p>
+              {item.issuedOn || item.expiresOn ? <span>{formatCredentialDates(item)}</span> : null}
+            </article>
+          ))}
+        </ResumeSection>
+      ) : null}
+
+      {resume.sectionVisibility.notes && resume.notes ? (
+        <ResumeSection title={resume.sectionTitles.notes} className="resume-template-modern__section">
+          <p className="resume-template-modern__notes">{resume.notes}</p>
+        </ResumeSection>
+      ) : null}
+    </>
+  );
+}
+
+function formatCredentialDates(item) {
+  const issued = item.issuedOn ? `Issued ${item.issuedOn}` : '';
+  const expires = item.expiresOn ? `Expires ${item.expiresOn}` : '';
+  return [issued, expires].filter(Boolean).join(' | ');
 }
 
 function getInitials(name) {

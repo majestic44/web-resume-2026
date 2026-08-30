@@ -3,6 +3,7 @@ import { getDatabasePool } from '../config/database.js';
 import { listProfiles as listSeedProfiles } from '../data/profiles.js';
 import { readSeedDocument } from '../services/documentStore.js';
 import { createResumeQrPublicToken } from '../services/resumeQrToken.js';
+import { listPublicCertifications } from './certificationRepository.js';
 
 function documentTypeForDatabase(type) {
   return type === 'cover-letter' ? 'cover_letter' : type;
@@ -85,7 +86,8 @@ export async function listProfilesForUser(user) {
 
 export async function readDocument(type, profileSlug) {
   if (!isDatabaseEnabled()) {
-    return readSeedDocument(type, profileSlug);
+    const document = await readSeedDocument(type, profileSlug);
+    return enrichResumeWithCertifications(document, type, profileSlug);
   }
 
   const databaseType = documentTypeForDatabase(type);
@@ -127,7 +129,7 @@ export async function readDocument(type, profileSlug) {
 
   const apiType = documentTypeForApi(row.type);
 
-  return {
+  const document = {
     meta: {
       slug: row.profile_slug,
       name: row.display_name,
@@ -142,5 +144,19 @@ export async function readDocument(type, profileSlug) {
         : { backLink: `/resume/${row.profile_slug}` })
     },
     content: typeof row.content_json === 'string' ? JSON.parse(row.content_json) : row.content_json
+  };
+
+  return enrichResumeWithCertifications(document, apiType, row.profile_slug);
+}
+
+async function enrichResumeWithCertifications(document, type, profileSlug) {
+  if (!document || type !== 'resume') return document;
+
+  return {
+    ...document,
+    content: {
+      ...document.content,
+      certifications: await listPublicCertifications(profileSlug)
+    }
   };
 }

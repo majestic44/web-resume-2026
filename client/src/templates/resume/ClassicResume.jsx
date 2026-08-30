@@ -126,6 +126,42 @@ export function ClassicResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
           </div>
         </section>
       ) : null}
+
+      {resume.sectionVisibility.certifications && resume.certifications.length ? (
+        <section className="resume-template-classic__section">
+          <div className="resume-template-classic__section-title">
+            <span className="resume-template-classic__rule" />
+            <h2>{resume.sectionTitles.certifications}</h2>
+            <span className="resume-template-classic__rule" />
+          </div>
+          <div className="resume-template-classic__simple-list">
+            {resume.certifications.map((item, index) => (
+              <article className="resume-template-classic__simple-entry" key={`${item.title}-${item.issuer}-${index}`}>
+                <h3>{item.title}</h3>
+                <div className="resume-template-classic__education-school">{[item.issuer, item.credentialId].filter(Boolean).join(' | ')}</div>
+                {item.issuedOn || item.expiresOn ? <div className="resume-template-classic__education-date">{formatCredentialDates(item)}</div> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {resume.sectionVisibility.notes && resume.notes ? (
+        <section className="resume-template-classic__section">
+          <div className="resume-template-classic__section-title">
+            <span className="resume-template-classic__rule" />
+            <h2>{resume.sectionTitles.notes}</h2>
+            <span className="resume-template-classic__rule" />
+          </div>
+          <p className="resume-template-classic__summary">{resume.notes}</p>
+        </section>
+      ) : null}
     </article>
   );
+}
+
+function formatCredentialDates(item) {
+  const issued = item.issuedOn ? `Issued ${item.issuedOn}` : '';
+  const expires = item.expiresOn ? `Expires ${item.expiresOn}` : '';
+  return [issued, expires].filter(Boolean).join(' | ');
 }

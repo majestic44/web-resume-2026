@@ -34,8 +34,27 @@ export function normalizeResumeData(data) {
       skills: data.sectionTitles?.skills || 'Core Skills',
       work: data.sectionTitles?.work || 'Professional Experience',
       education: data.sectionTitles?.education || 'Education',
-      volunteer: data.sectionTitles?.volunteer || 'Volunteer Work'
+      volunteer: data.sectionTitles?.volunteer || 'Volunteer Work',
+      certifications: data.sectionTitles?.certifications || 'Certifications & Licenses',
+      notes: data.sectionTitles?.notes || 'Notes'
     },
+    sectionVisibility: {
+      certifications: Boolean(data.sectionVisibility?.certifications),
+      notes: Boolean(data.sectionVisibility?.notes)
+    },
+    certifications: Array.isArray(data.certifications)
+      ? data.certifications
+        .filter(item => item?.title)
+        .map(item => ({
+          title: item.title,
+          issuer: item.issuer || '',
+          issuedOn: item.issuedOn || '',
+          expiresOn: item.expiresOn || '',
+          credentialId: item.credentialId || '',
+          status: item.status || ''
+        }))
+      : [],
+    notes: String(data.notes || '').trim(),
     selectedStrengths: Array.isArray(data.selectedStrengths) ? data.selectedStrengths.filter(Boolean) : [],
     skillGroups: normalizeSkillGroups(data.skills),
     work: Array.isArray(data.work)
