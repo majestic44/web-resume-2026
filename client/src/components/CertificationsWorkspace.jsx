@@ -1,6 +1,7 @@
 import { Button, Card, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
 import { Award, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { formatCredentialDate } from '../lib/credentialDate.js';
 
 const statusOptions = [
   { id: 'active', label: 'Active' },
@@ -61,18 +62,6 @@ function formatStatusLabel(value) {
   return statusOptions.find(option => option.id === value)?.label || 'Active';
 }
 
-function formatDateValue(value) {
-  if (!value) return 'Not set';
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
 function CertificationCard({ item, state, onPatch, onSave, onDelete }) {
   return (
     <Card className="profile-card member-card certification-card">
@@ -86,8 +75,8 @@ function CertificationCard({ item, state, onPatch, onSave, onDelete }) {
             <h2>{state.title || item.title}</h2>
             <p>{state.issuer || item.issuer}</p>
             <div className="certification-card__meta">
-              <span>Issued: {formatDateValue(state.issuedOn)}</span>
-              {state.expiresOn ? <span>Expires: {formatDateValue(state.expiresOn)}</span> : null}
+              <span>Issued: {formatCredentialDate(state.issuedOn) || 'Not set'}</span>
+              {state.expiresOn ? <span>Expires: {formatCredentialDate(state.expiresOn)}</span> : null}
             </div>
           </div>
         </div>

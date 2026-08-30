@@ -1,5 +1,6 @@
 import { Award, BriefcaseBusiness, ExternalLink, FileText, LockKeyhole, Mail, MailOpen, Phone, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { formatCredentialDate } from '../lib/credentialDate.js';
 
 function getInitials(name) {
   return String(name || '')
@@ -40,19 +41,6 @@ function getCertificationStatusLabel(value) {
     in_progress: 'In Progress',
     expired: 'Expired'
   })[value] || 'Active';
-}
-
-function formatCredentialDate(value) {
-  if (!value) return 'Not set';
-
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 }
 
 function uniqueValues(values) {
@@ -541,7 +529,7 @@ export function ProfilePublic({ pathname, shared = false }) {
                     </div>
 
                     <div className="public-certification-card__meta">
-                      <span>Issued: {formatCredentialDate(item.issuedOn)}</span>
+                      <span>Issued: {formatCredentialDate(item.issuedOn) || 'Not set'}</span>
                       {item.expiresOn ? <span>Expires: {formatCredentialDate(item.expiresOn)}</span> : null}
                       {item.credentialId ? <span>ID: {item.credentialId}</span> : null}
                     </div>
