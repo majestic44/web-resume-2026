@@ -1,4 +1,5 @@
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
+import { formatCredentialDate } from '../../lib/credentialDate.js';
 
 export function ClassicResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
   const skillList = resume.skillGroups.flatMap(group => group.keywords);
@@ -161,7 +162,7 @@ export function ClassicResume({ resume, qrCodeUrl = '', onQrCodeReady }) {
 }
 
 function formatCredentialDates(item) {
-  const issued = item.issuedOn ? `Issued ${item.issuedOn}` : '';
-  const expires = item.expiresOn ? `Expires ${item.expiresOn}` : '';
+  const issued = item.issuedOn ? `Issued ${formatCredentialDate(item.issuedOn)}` : '';
+  const expires = item.expiresOn ? `Expires ${formatCredentialDate(item.expiresOn)}` : '';
   return [issued, expires].filter(Boolean).join(' | ');
 }

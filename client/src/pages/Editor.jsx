@@ -1231,6 +1231,8 @@ function EducationSection({ draft, updateDraft }) {
 function ResumeDetailsSection({ draft, updateDraft, updateSectionTitle }) {
   const certificationsVisible = Boolean(draft.sectionVisibility?.certifications);
   const notesVisible = Boolean(draft.sectionVisibility?.notes);
+  const certificationCount = Array.isArray(draft.certifications) ? draft.certifications.length : 0;
+  const hasNotes = Boolean(String(draft.notes || '').trim());
 
   return (
     <>
@@ -1252,7 +1254,11 @@ function ResumeDetailsSection({ draft, updateDraft, updateSectionTitle }) {
           value={draft.sectionTitles.certifications}
           onChange={value => updateSectionTitle('certifications', value)}
         />
-        <p className="field-help">Credentials are managed in the Certifications workspace and will be placed above Notes when enabled.</p>
+        <p className="field-help">
+          {certificationCount
+            ? `${certificationCount} credential${certificationCount === 1 ? '' : 's'} will appear above Notes when this is enabled.`
+            : 'No certifications or licenses exist for this profile yet. Add them in the Certifications workspace before this section can render.'}
+        </p>
       </div>
       <div className="form-stack">
         <label className="profile-section-toggle">
@@ -1274,7 +1280,9 @@ function ResumeDetailsSection({ draft, updateDraft, updateSectionTitle }) {
           onChange={value => updateDraft(current => ({ ...current, notes: value }))}
           help="Use this for a concise availability, credential, or other closing note."
         />
+        {!hasNotes ? <p className="field-help">Add Notes text before enabling this section; an empty Notes section is intentionally not shown on the resume.</p> : null}
       </div>
+      <p className="field-help">Public Preview and PDF export show the published resume only. Save Draft, then Publish Live after changing either toggle.</p>
     </>
   );
 }

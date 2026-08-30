@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ResumeSection } from '../shared.jsx';
 import ProfileQRCode from '../../components/ProfileQRCode.jsx';
+import { formatCredentialDate } from '../../lib/credentialDate.js';
 import { WorkHistory } from './WorkHistory.jsx';
 
 const PRINT_WORK_LIMIT = 11;
@@ -194,8 +195,8 @@ function ResumeBottomDetails({ resume }) {
 }
 
 function formatCredentialDates(item) {
-  const issued = item.issuedOn ? `Issued ${item.issuedOn}` : '';
-  const expires = item.expiresOn ? `Expires ${item.expiresOn}` : '';
+  const issued = item.issuedOn ? `Issued ${formatCredentialDate(item.issuedOn)}` : '';
+  const expires = item.expiresOn ? `Expires ${formatCredentialDate(item.expiresOn)}` : '';
   return [issued, expires].filter(Boolean).join(' | ');
 }
 
