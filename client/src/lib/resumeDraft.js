@@ -1,10 +1,24 @@
-const blankExperience = {
-  role: '',
-  company: '',
-  location: '',
-  dates: '',
-  bulletsText: ''
-};
+let nextExperienceDraftId = 0;
+
+function createExperienceDraftId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  nextExperienceDraftId += 1;
+  return `experience-${Date.now()}-${nextExperienceDraftId}`;
+}
+
+function createBlankExperience() {
+  return {
+    _draftId: createExperienceDraftId(),
+    role: '',
+    company: '',
+    location: '',
+    dates: '',
+    bulletsText: ''
+  };
+}
 
 const blankSkillGroup = {
   name: 'Core Skills',
@@ -75,13 +89,14 @@ export function createResumeDraft(data = {}) {
     skills: normalizeSkillDraft(data.skills),
     experience: Array.isArray(data.experience)
       ? data.experience.map(item => ({
+          _draftId: item._draftId || createExperienceDraftId(),
           role: item.role || item.position || '',
           company: item.company || '',
           location: item.location || '',
           dates: item.dates || item.dateLabel || '',
           bulletsText: toLines(item.bullets || item.highlights)
         }))
-      : [{ ...blankExperience }],
+      : [createBlankExperience()],
     education: Array.isArray(data.education)
       ? data.education.map(item => ({
           credential: item.credential || item.area || '',
@@ -145,7 +160,7 @@ export function resumeDraftToJson(draft) {
 export function addExperienceItem(draft) {
   return {
     ...draft,
-    experience: [...(draft.experience || []), { ...blankExperience }]
+    experience: [createBlankExperience(), ...(draft.experience || [])]
   };
 }
 

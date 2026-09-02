@@ -1159,7 +1159,7 @@ function ExperienceSection({ draft, updateDraft }) {
         onChange={value => updateDraft(current => updateNestedValue(current, ['sectionTitles', 'work'], value))}
       />
       {draft.experience.map((item, index) => (
-        <div className="nested-card" key={`${item.company}-${item.role}-${index}`}>
+        <div className="nested-card" key={item._draftId}>
           <div className="nested-card-header">
             <h3>Experience {index + 1}</h3>
             <button type="button" onClick={() => updateDraft(current => ({ ...current, experience: removeResumeArrayItem(current.experience, index) }))}>
