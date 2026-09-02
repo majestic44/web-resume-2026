@@ -145,7 +145,7 @@ export function resumeDraftToJson(draft) {
 export function addExperienceItem(draft) {
   return {
     ...draft,
-    experience: [...(draft.experience || []), { ...blankExperience }]
+    experience: [{ ...blankExperience }, ...(draft.experience || [])]
   };
 }
 
