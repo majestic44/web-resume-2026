@@ -175,3 +175,14 @@ export function removeArrayItem(items, index) {
   return items.filter((_, itemIndex) => itemIndex !== index);
 }
 
+export function moveArrayItem(items, fromIndex, toIndex) {
+  if (fromIndex === toIndex || toIndex < 0 || toIndex >= items.length) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [item] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, item);
+  return nextItems;
+}
+

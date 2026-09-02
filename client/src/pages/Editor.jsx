@@ -1,5 +1,5 @@
 import { Button, Card, Chip, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { Eye, History, ImagePlus, Plus, Printer, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, History, ImagePlus, Plus, Printer, RotateCcw, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CertificationsWorkspace } from '../components/CertificationsWorkspace.jsx';
 import { PortfolioWorkspace } from '../components/PortfolioWorkspace.jsx';
@@ -13,6 +13,7 @@ import {
   addExperienceItem,
   addSkillGroup,
   createResumeDraft,
+  moveArrayItem as moveResumeArrayItem,
   removeArrayItem as removeResumeArrayItem,
   resumeDraftToJson
 } from '../lib/resumeDraft.js';
@@ -1150,9 +1151,16 @@ function SkillsSection({ draft, updateDraft }) {
 }
 
 function ExperienceSection({ draft, updateDraft }) {
+  const moveExperience = (index, direction) => {
+    updateDraft(current => ({
+      ...current,
+      experience: moveResumeArrayItem(current.experience, index, index + direction)
+    }));
+  };
+
   return (
     <>
-      <EditorSectionHeading title="Experience" description="Edit roles, dates, and bullet points from the resume experience section." />
+      <EditorSectionHeading title="Experience" description="The first job is shown at the top of the resume. Use the arrows to choose the order." />
       <DraftInput
         label="Experience Section Title"
         value={draft.sectionTitles.work}
@@ -1162,10 +1170,20 @@ function ExperienceSection({ draft, updateDraft }) {
         <div className="nested-card" key={item._draftId}>
           <div className="nested-card-header">
             <h3>Experience {index + 1}</h3>
-            <button type="button" onClick={() => updateDraft(current => ({ ...current, experience: removeResumeArrayItem(current.experience, index) }))}>
-              <Trash2 size={16} />
-              <span>Remove</span>
-            </button>
+            <div className="nested-card-actions">
+              <button type="button" disabled={index === 0} onClick={() => moveExperience(index, -1)} aria-label={`Move experience ${index + 1} up`}>
+                <ChevronUp size={16} />
+                <span>Move Up</span>
+              </button>
+              <button type="button" disabled={index === draft.experience.length - 1} onClick={() => moveExperience(index, 1)} aria-label={`Move experience ${index + 1} down`}>
+                <ChevronDown size={16} />
+                <span>Move Down</span>
+              </button>
+              <button type="button" className="remove-button" onClick={() => updateDraft(current => ({ ...current, experience: removeResumeArrayItem(current.experience, index) }))}>
+                <Trash2 size={16} />
+                <span>Remove</span>
+              </button>
+            </div>
           </div>
           <div className="form-grid two">
             <DraftInput label="Role" value={item.role} onChange={value => updateExperience(updateDraft, index, { role: value })} />
