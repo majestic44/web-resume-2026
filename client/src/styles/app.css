@@ -2189,7 +2189,32 @@ button.portfolio-card__asset-link {
   color: #172033;
 }
 
-.nested-card-header button {
+.nested-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nested-card-actions button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #b9c8d9;
+  border-radius: 8px;
+  color: #1e3a5f;
+  background: #f8fbff;
+  font-weight: 800;
+}
+
+.nested-card-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.nested-card-header > button,
+.nested-card-actions .remove-button {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
